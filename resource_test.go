@@ -1,7 +1,7 @@
 package resource
 
 import (
-	"log"
+	"fmt"
 	"testing"
 )
 
@@ -16,13 +16,17 @@ func TestResource(t *testing.T) {
 
 	resource := NewResource(a, "recurso")
 
-	//NewServer(resource)
+	server := NewServer(resource)
 
 	//server.BuildRoutes()
 
-	log.Println("----------")
+	fmt.Println("----------")
 
 	printResource(resource, 0)
+
+	fmt.Println("----------")
+
+	printRoute(server.Route, 0)
 
 }
 
@@ -40,15 +44,25 @@ type A struct {
 
 type BList []B
 
+func (b *BList) Init(c *C) {}
+
+func (b *BList) POST() {}
+
 type B struct {
 	Id   int
 	Name string
 	C    C "Tag de C"
 }
 
+func (b *B) GET() {}
+
 type C struct {
 	Nothing string
 }
+
+func (c *C) Init(d D) {}
+
+func (c *C) PUT(d *D) {}
 
 type X struct {
 	Test string
@@ -56,11 +70,13 @@ type X struct {
 	C    C
 }
 
-func (a *A) Init() *A {
+func (b *X) PUT() {}
+
+func (a *A) Init(b BList) *A {
 	return &A{}
 }
 
-func (a *A) GET(x A, y A, z InterfaceA) *A {
+func (a *A) GET(x A, y A, z InterfaceA, i *BList) *A {
 	return a
 }
 
@@ -69,6 +85,12 @@ func (a *A) doSomething() {}
 type InterfaceA interface {
 	doSomething()
 }
+
+type D struct {
+	Test string
+}
+
+func (d *D) Init() {}
 
 // Set the value passed by user on creation
 //ptrValue.Elem().Set(value)

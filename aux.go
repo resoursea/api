@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"reflect"
@@ -33,30 +32,6 @@ func isContextType(resourceType reflect.Type) bool {
 	return resourceType.AssignableTo(responseWriterType) ||
 		resourceType.AssignableTo(requestPtrType) ||
 		resourceType == idType
-}
-
-func printResource(r *Resource, lvl int) {
-	fmt.Printf("%-16s %-20s %-5v  ",
-		strings.Repeat("|  ", lvl)+"|-["+r.Name+"]",
-		r.Value.Type(), r.isSlice())
-
-	if len(r.Tag) > 0 {
-		fmt.Printf("tag: '%s' ", r.Tag)
-	}
-
-	if r.isSlice() {
-		fmt.Printf("slice: %s ", r.SliceValue.Type())
-	}
-
-	if r.Anonymous {
-		fmt.Printf("anonymous")
-	}
-
-	fmt.Println()
-
-	for _, c := range r.Children {
-		printResource(c, lvl+1)
-	}
 }
 
 // Return if this method should be mapped or not
@@ -123,10 +98,18 @@ func elemOf(value reflect.Value) reflect.Value {
 	return value
 }
 
-// If Value is a Ptr, return the Elem it points to
+// If Type is a Ptr, return the Type of the Elem it points to
 func elemOfType(t reflect.Type) reflect.Type {
 	if t.Kind() == reflect.Ptr {
 		return t.Elem()
+	}
+	return t
+}
+
+// If Type is not a Ptr, return the one Type that points to it
+func ptrOfType(t reflect.Type) reflect.Type {
+	if t.Kind() != reflect.Ptr {
+		return reflect.PtrTo(t)
 	}
 	return t
 }
@@ -139,13 +122,12 @@ func isValidValue(v reflect.Value) bool {
 	return isValid
 }
 
-// TODO
-//
 // Return the true if the dependency is one of those types
 // Interface, Struct, *Struct, []Struct or []*Struct
 func isValidDependencyType(t reflect.Type) bool {
-	log.Println("Validating", t)
-	//log.Println("Validating2", t.Elem())
+	t = elemOfType(t)
 
-	return true
+	return t.Kind() == reflect.Interface ||
+		t.Kind() == reflect.Struct ||
+		t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Struct
 }

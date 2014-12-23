@@ -84,4 +84,28 @@ func (m *Method) scanDependency(dependencyType reflect.Type, resource *Resource)
 	m.Dependencies[dependencyType] = dependency
 
 	log.Printf("Created dependency %s to use as %s\n", value, dependencyType)
+
+	m.scanInit(dependency, resource)
+}
+
+// Scan the dependencies of the Init method of some type
+func (m *Method) scanInit(dependency *Dependency, resource *Resource) {
+
+	method, exists := dependency.Value.Type().MethodByName("Init")
+	if !exists {
+		log.Printf("Type %s doesn't have Init method\n", dependency.Value.Type())
+		return
+	}
+
+	log.Println("Scan Init method for", method.Type)
+
+	for i := 0; i < method.Type.NumIn(); i++ {
+		input := method.Type.In(i)
+
+		log.Printf("Init %s depends on %s\n", method.Type, input)
+
+		dependency.Input = append(dependency.Input, input)
+
+		m.scanDependency(input, resource)
+	}
 }
