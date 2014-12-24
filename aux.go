@@ -8,30 +8,30 @@ import (
 )
 
 // This constants will be used on the method above
-var responseWriterPtrType = reflect.TypeOf((*http.ResponseWriter)(nil))
-var responseWriterType = responseWriterPtrType.Elem()
-var requestPtrType = reflect.TypeOf((*http.Request)(nil))
-var requestType = requestPtrType.Elem()
+var ResponseWriterPtrType = reflect.TypeOf((*http.ResponseWriter)(nil))
+var ResponseWriterType = ResponseWriterPtrType.Elem()
+var RequestPtrType = reflect.TypeOf((*http.Request)(nil))
+var RequestType = RequestPtrType.Elem()
 
 // This method return true if the received type is an context type
 // It means that it doesn't need to be mapped and will be present in the context
 // It also return an error message if user used *http.ResponseWriter or used http.Request
 func isContextType(resourceType reflect.Type) bool {
 	// Test if user used *http.ResponseWriter insted of http.ResponseWriter
-	if resourceType.AssignableTo(responseWriterPtrType) {
-		log.Fatalf("You asked for %s when you should used %s", resourceType, responseWriterType)
+	if resourceType.AssignableTo(ResponseWriterPtrType) {
+		log.Fatalf("You asked for %s when you should used %s", resourceType, ResponseWriterType)
 	}
 	// Test if user used http.Request insted of *http.Request
-	if resourceType.AssignableTo(requestType) {
-		log.Fatalf("You asked for %s when you should used %s", resourceType, requestPtrType)
+	if resourceType.AssignableTo(RequestType) {
+		log.Fatalf("You asked for %s when you should used %s", resourceType, RequestPtrType)
 	}
 	// Test if user used *ID insted of ID
-	if resourceType.AssignableTo(idPtrType) {
-		log.Fatalf("You asked for %s when you should used %s", idPtrType, idType)
+	if resourceType.AssignableTo(IdPtrType) {
+		log.Fatalf("You asked for %s when you should used %s", IdPtrType, IdType)
 	}
-	return resourceType.AssignableTo(responseWriterType) ||
-		resourceType.AssignableTo(requestPtrType) ||
-		resourceType == idType
+	return resourceType.AssignableTo(ResponseWriterType) ||
+		resourceType.AssignableTo(RequestPtrType) ||
+		resourceType == IdType
 }
 
 // Return if this method should be mapped or not
@@ -130,4 +130,12 @@ func isValidDependencyType(t reflect.Type) bool {
 	return t.Kind() == reflect.Interface ||
 		t.Kind() == reflect.Struct ||
 		t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Struct
+}
+
+// Return true if this Type is a Slice or Ptr to Slice
+func isSlice(t reflect.Type) bool {
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t.Kind() == reflect.Slice
 }

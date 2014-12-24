@@ -12,21 +12,22 @@ type CircularDependency struct {
 	Dependents []reflect.Type
 }
 
-func checkCircularDependency(r *Route) {
+func circularDependency(r *Route) error {
 	c := &CircularDependency{
 		Dependents: []reflect.Type{},
 	}
 	err := c.checkRoute(r)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	return nil
 }
 
 func (c *CircularDependency) checkRoute(r *Route) error {
 
 	for _, m := range r.Methods {
 
-		log.Println("Check CD for", m.Method)
+		//log.Println("Check CD for", m.Method)
 
 		for _, d := range m.Dependencies {
 			// It's necessary cause we will have many depenedencies
@@ -55,27 +56,27 @@ func (c *CircularDependency) checkRoute(r *Route) error {
 	return nil
 }
 
-func (c *CircularDependency) checkDependency(d *Dependency, dependencies Dependencies) error {
+func (c *CircularDependency) checkDependency(dependency *Dependency, dependencies Dependencies) error {
 
 	// Add this dependency type to the dependency list
-	err := c.add(d.Value.Type())
+	err := c.add(dependency.Value.Type())
 	if err != nil {
 		log.Fatalln(err)
 		return err
 	}
 
-	for i, t := range d.Input {
+	for i, t := range dependency.Input {
 
 		// The first element will always be the dependency itself
 		if i == 0 {
 			continue
 		}
 
-		d2, exist := dependencies.vaueOf(t)
+		d, exist := dependencies.vaueOf(t)
 		if !exist { // It should never occurs!
 			log.Panicf("Danger! No dependency %s found!\n", t)
 		}
-		c.checkDependency(d2, dependencies)
+		c.checkDependency(d, dependencies)
 	}
 
 	// Remove itself from the list
@@ -84,6 +85,8 @@ func (c *CircularDependency) checkDependency(d *Dependency, dependencies Depende
 	return nil
 }
 
+// Checks whether the Dependents doesn't fall into a circular dependency
+// Add a new type to the Dependents list
 func (c *CircularDependency) add(t reflect.Type) error {
 
 	// Check for circular dependency
@@ -115,13 +118,12 @@ func (c *CircularDependency) add(t reflect.Type) error {
 // Remove the last element from the Dependents list
 func (c *CircularDependency) pop() {
 	//log.Println("Removing:", c.Dependents[len(c.Dependents)-1])
-
 	c.Dependents = c.Dependents[:len(c.Dependents)-1]
 }
 
-func (c *CircularDependency) notChecked(d *Dependency) bool {
-	for _, checkedDependency := range c.Checked {
-		if d == checkedDependency {
+func (c *CircularDependency) notChecked(dependency *Dependency) bool {
+	for _, d := range c.Checked {
+		if dependency == d {
 			return false
 		}
 	}

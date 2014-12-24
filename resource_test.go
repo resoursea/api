@@ -2,6 +2,9 @@ package resource
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -16,17 +19,33 @@ func TestResource(t *testing.T) {
 
 	resource := NewResource(a, "recurso")
 
-	server := NewServer(resource)
+	server := NewServer()
+
+	err := server.Add(resource)
+	if err != nil {
+		log.Println(err)
+	}
 
 	//server.BuildRoutes()
 
-	fmt.Println("----------")
+	fmt.Println("\n1 ----------\n")
 
 	printResource(resource, 0)
 
-	fmt.Println("----------")
+	fmt.Println("\n2 ----------\n")
 
 	printRoute(server.Route, 0)
+
+	fmt.Println("\n3 ----------\n")
+
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/recurso/bs/", nil)
+
+	server.ServeHTTP(res, req)
+
+	fmt.Printf("RETURN: %v\n", res.Body)
+
+	fmt.Println("\nEND --------\n")
 
 }
 
@@ -46,7 +65,9 @@ type BList []B
 
 func (b *BList) Init(c *C) {}
 
-func (b *BList) POST() {}
+func (b *BList) GET() *BList {
+	return &BList{B{Id: 123}}
+}
 
 type B struct {
 	Id   int
@@ -54,7 +75,7 @@ type B struct {
 	C    C "Tag de C"
 }
 
-func (b *B) GET() {}
+func (b *B) PUT() {}
 
 type C struct {
 	Nothing string
@@ -62,7 +83,7 @@ type C struct {
 
 func (c *C) Init(d D) {}
 
-func (c *C) PUT(d *D) {}
+//func (c *C) PUT(d *D) {}
 
 type X struct {
 	Test string
@@ -70,13 +91,13 @@ type X struct {
 	C    C
 }
 
-func (b *X) PUT() {}
+//func (b *X) PUT() {}
 
 func (a *A) Init(b BList) *A {
 	return &A{}
 }
 
-func (a *A) GET(x A, y A, z InterfaceA, i *BList) *A {
+func (a *A) GET(x A, i *BList) *A {
 	return a
 }
 

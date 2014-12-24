@@ -10,14 +10,16 @@ import (
 // ans its child will receive the ID 321 when asked for it
 type ID string
 
-type IDValueMap map[reflect.Type]reflect.Value
+type IDMap map[reflect.Type]reflect.Value
 
-func NewIDValueMap() IDValueMap {
-	return IDValueMap{}
+var IdType = reflect.TypeOf(ID(""))
+
+var IdPtrType = reflect.TypeOf(reflect.New(IdType))
+
+var EmptyIDValue = reflect.ValueOf(ID(""))
+
+func (ids IDMap) add(child IDMap) {
+	for t, v := range child {
+		ids[t] = v
+	}
 }
-
-var idType = reflect.TypeOf(ID(""))
-
-var idPtrType = reflect.TypeOf(reflect.New(idType))
-
-var emptyIDValue = reflect.ValueOf(ID(""))

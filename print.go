@@ -31,12 +31,20 @@ func printResource(r *Resource, lvl int) {
 }
 
 func printRoute(r *Route, lvl int) {
-	fmt.Printf("%-20s  ", strings.Repeat("|	", lvl)+"|-["+r.URI+"]")
+	fmt.Printf("%s", strings.Repeat("|	", lvl)+"|-/"+r.URI)
+
+	if r.IsSlice {
+		fmt.Printf(" *is slice*")
+	}
 
 	fmt.Println()
 
+	for _, m := range r.SliceMethods {
+		printMethod(m, true, lvl+1)
+	}
+
 	for _, m := range r.Methods {
-		printMethod(m, lvl+1)
+		printMethod(m, false, lvl+1)
 	}
 
 	for _, c := range r.Children {
@@ -44,10 +52,14 @@ func printRoute(r *Route, lvl int) {
 	}
 }
 
-func printMethod(m *Method, lvl int) {
-	fmt.Printf("%-20s  ", strings.Repeat("|	", lvl)+"|-"+m.Name+"()   Dependencies:")
+func printMethod(m *Method, isSlice bool, lvl int) {
+	fmt.Printf("%s ", strings.Repeat("|	", lvl)+"| -")
 
-	fmt.Println()
+	if isSlice {
+		fmt.Printf("[] ")
+	}
+
+	fmt.Println(m.Name + "()   Dependencies:")
 
 	for t, d := range m.Dependencies {
 		printDependency(t, d, lvl+1)

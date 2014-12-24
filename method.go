@@ -17,7 +17,7 @@ type Method struct {
 
 func NewMethod(method reflect.Method, resource *Resource) *Method {
 
-	log.Println("Creating method", method)
+	//log.Println("Creating method", method)
 
 	m := &Method{
 		Name:         method.Name,
@@ -45,7 +45,7 @@ func NewMethod(method reflect.Method, resource *Resource) *Method {
 // when the dependent want then
 func (m *Method) scanDependency(dependencyType reflect.Type, resource *Resource) {
 
-	log.Println("Scanning dependency", dependencyType)
+	//log.Println("Scanning dependency", dependencyType)
 
 	// If the required resource is http.ResponseWriter or *http.Request or ID
 	// it will be added to context on each request and don't need to be mapped
@@ -60,9 +60,9 @@ func (m *Method) scanDependency(dependencyType reflect.Type, resource *Resource)
 	// Check if this type already exists in the dependencies
 	// If it was indexed by another type, this method
 	// ensures that it will be indexed for this type too
-	d, exist := m.Dependencies.vaueOf(dependencyType)
+	_, exist := m.Dependencies.vaueOf(dependencyType)
 	if exist {
-		log.Printf("Found dependency %s to use as %s\n", d.Value, dependencyType)
+		//log.Printf("Found dependency %s to use as %s\n", d.Value, dependencyType)
 		return // This type already exist
 	}
 
@@ -83,7 +83,7 @@ func (m *Method) scanDependency(dependencyType reflect.Type, resource *Resource)
 
 	m.Dependencies[dependencyType] = dependency
 
-	log.Printf("Created dependency %s to use as %s\n", value, dependencyType)
+	//log.Printf("Created dependency %s to use as %s\n", value, dependencyType)
 
 	m.scanInit(dependency, resource)
 }
@@ -93,16 +93,16 @@ func (m *Method) scanInit(dependency *Dependency, resource *Resource) {
 
 	method, exists := dependency.Value.Type().MethodByName("Init")
 	if !exists {
-		log.Printf("Type %s doesn't have Init method\n", dependency.Value.Type())
+		//log.Printf("Type %s doesn't have Init method\n", dependency.Value.Type())
 		return
 	}
 
-	log.Println("Scan Init method for", method.Type)
+	//log.Println("Scan Init method for", method.Type)
 
 	for i := 0; i < method.Type.NumIn(); i++ {
 		input := method.Type.In(i)
 
-		log.Printf("Init %s depends on %s\n", method.Type, input)
+		//log.Printf("Init %s depends on %s\n", method.Type, input)
 
 		dependency.Input = append(dependency.Input, input)
 
