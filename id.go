@@ -12,9 +12,9 @@ type ID string
 
 type IDMap map[reflect.Type]reflect.Value
 
-var IdType = reflect.TypeOf(ID(""))
+var IDType = reflect.TypeOf(ID(""))
 
-var IdPtrType = reflect.TypeOf(reflect.New(IdType))
+var IDPtrType = reflect.TypeOf(reflect.New(IDType))
 
 var EmptyIDValue = reflect.ValueOf(ID(""))
 

@@ -70,7 +70,7 @@ func printMethod(m *Method, isSlice bool, lvl int) {
 func printDependency(t reflect.Type, d *Dependency, lvl int) {
 	fmt.Printf("%s %-24s as %-24s", strings.Repeat("|	", lvl)+"-", t, d.Value.Type())
 
-	if len(d.Input) > 0 {
+	if d.hasInit() {
 		fmt.Printf(" Init Input:")
 	} else {
 		fmt.Printf(" Desn't have Init method")

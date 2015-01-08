@@ -15,6 +15,7 @@ func TestResource(t *testing.T) {
 	a := A{
 		Name: "Testing",
 		X:    X{Test: "Tested"},
+		Bs:   BList{B{Name: "Started"}},
 	}
 
 	resource := NewResource(a, "recurso")
@@ -63,10 +64,12 @@ type A struct {
 
 type BList []B
 
-func (b *BList) Init(c *C) {}
+func (b *BList) Init(c *C, d D) {
+	log.Println("*** BList Received", c)
+}
 
 func (b *BList) GET() *BList {
-	return &BList{B{Id: 123}}
+	return b
 }
 
 type B struct {
@@ -81,7 +84,10 @@ type C struct {
 	Nothing string
 }
 
-func (c *C) Init(d D) {}
+func (c *C) Init(d D) {
+	c.Nothing = "Initialized ok"
+	log.Println("*** C Received", d)
+}
 
 //func (c *C) PUT(d *D) {}
 
@@ -111,7 +117,9 @@ type D struct {
 	Test string
 }
 
-func (d *D) Init() {}
+func (d *D) Init() {
+	d.Test = "TESTED"
+}
 
 // Set the value passed by user on creation
 //ptrValue.Elem().Set(value)

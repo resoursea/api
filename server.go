@@ -46,17 +46,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	log.Printf("Route [%s] %s got, ids: %q\n", method.Name, req.URL.RequestURI(), ids)
 
-	/*
-		// Trans form the method output into an slice of the values
-		// * Needed to generate a JSON response
-		response := make([]interface{}, len(output))
-		for i, v := range output {
-			response[i] = v.Interface()
-		}
-	*/
+	context := newContext(method, w, req, ids)
+
+	output := context.run()
+
+	// Trans form the method output into an slice of the values
+	// * Needed to generate a JSON response
+	response := make([]interface{}, len(output))
+	for i, v := range output {
+		response[i] = v.Interface()
+	}
 
 	// Compile our response in JSON
-	responseJson, err := json.Marshal(ids)
+	responseJson, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

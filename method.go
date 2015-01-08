@@ -97,6 +97,8 @@ func (m *Method) scanInit(dependency *Dependency, resource *Resource) {
 		return
 	}
 
+	dependency.Method = method
+
 	//log.Println("Scan Init method for", method.Type)
 
 	for i := 0; i < method.Type.NumIn(); i++ {
@@ -108,4 +110,5 @@ func (m *Method) scanInit(dependency *Dependency, resource *Resource) {
 
 		m.scanDependency(input, resource)
 	}
+
 }

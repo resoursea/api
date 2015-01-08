@@ -26,12 +26,12 @@ func isContextType(resourceType reflect.Type) bool {
 		log.Fatalf("You asked for %s when you should used %s", resourceType, RequestPtrType)
 	}
 	// Test if user used *ID insted of ID
-	if resourceType.AssignableTo(IdPtrType) {
-		log.Fatalf("You asked for %s when you should used %s", IdPtrType, IdType)
+	if resourceType.AssignableTo(IDPtrType) {
+		log.Fatalf("You asked for %s when you should used %s", IDPtrType, IDType)
 	}
 	return resourceType.AssignableTo(ResponseWriterType) ||
 		resourceType.AssignableTo(RequestPtrType) ||
-		resourceType == IdType
+		resourceType == IDType
 }
 
 // Return if this method should be mapped or not
