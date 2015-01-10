@@ -40,7 +40,7 @@ func TestResource(t *testing.T) {
 	fmt.Println("\n3 ----------\n")
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/recurso/bs/123", nil)
+	req, _ := http.NewRequest("GET", "/recurso/bs/123/cs/321", nil)
 
 	server.ServeHTTP(res, req)
 
@@ -76,11 +76,11 @@ type B struct {
 	Id   int
 	Name string
 	//d    D
-	//Cs CList "Tag de C"
+	Cs CList "Tag de C"
 }
 
 func (b *B) Init(id ID) *B {
-	log.Println("*** ID Received", id)
+	log.Println("*** B ID Received", id)
 	b.Name = id.String()
 	b.Id, _ = id.Int()
 	return b
@@ -92,22 +92,25 @@ func (b *B) GET(id ID) *B {
 func (b *B) PUT() {}
 
 type C struct {
+	Id      int
+	BId     int
 	Nothing string
 }
 
-func (c *C) Init() {
-	c.Nothing = "Initialized ok"
-	//log.Println("*** C Received", d)
+func (c *C) Init(id ID, b B) {
+	log.Println("*** C Received ID:", id)
+	c.Id, _ = id.Int()
+	c.BId = b.Id
 }
 
-type CList []B
-
-func (c *CList) Init(id ID) {
-	log.Println("*** CList Received ID:", id)
-}
-
-func (c *CList) GET() *CList {
+func (c *C) GET() *C {
 	return c
+}
+
+type CList []C
+
+func (c *CList) Init() {
+	//log.Println("*** C Received", d)
 }
 
 //func (c *C) PUT(d *D) {}
