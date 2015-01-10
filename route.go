@@ -86,7 +86,7 @@ func (r *Route) ScanResource(resource *Resource) {
 // This type could be []*Resource or just *Resource
 func (r *Route) ScanType(t reflect.Type, resource *Resource) {
 
-	log.Println("Scanning methods from type", t, isSlice(t))
+	//log.Println("Scanning methods from type", t, isSlice(t))
 
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
@@ -154,7 +154,7 @@ func (r *Route) getHandler(uri []string, method string) (*Handler, IDMap, error)
 	// Store the IDs of the resources took in the url
 	ids := IDMap{}
 
-	log.Println("Getting Handler", next)
+	//log.Println("Getting Handler", next)
 
 	route, exist := r.Children[next]
 	if !exist {

@@ -27,7 +27,7 @@ func (c *CircularDependency) checkRoute(r *Route) error {
 
 	for _, h := range r.Handlers {
 
-		log.Println("Check CD for", h.Method.Method)
+		//log.Println("Check CD for", h.Method.Method)
 
 		for _, d := range h.Dependencies {
 			// It's necessary cause we will have many depenedencies

@@ -16,7 +16,7 @@ type Handler struct {
 
 func NewHandler(resource *Resource, method *Method) *Handler {
 
-	log.Println("Creating Handler", method.Name, "for resource", resource.Name)
+	//log.Println("Creating Handler", method.Name, "for resource", resource.Name)
 
 	h := &Handler{
 		Name:         method.Name,
@@ -77,9 +77,10 @@ func (h *Handler) scanDependency(dependencyType reflect.Type, resource *Resource
 	// cause its first argument will requires itself
 	h.Dependencies[dependencyType] = d
 
+	log.Printf("Created dependency %s to use as %s\n", value, dependencyType)
+
 	d.Method = scanInit(value, h, resource)
 
-	log.Printf("Created dependency %s to use as %s\n", value, dependencyType)
 }
 
 // Scan the dependencies of the Init method of some type
@@ -87,17 +88,25 @@ func scanInit(value reflect.Value, handler *Handler, resource *Resource) *Method
 
 	method, exists := value.Type().MethodByName("Init")
 	if !exists {
-		log.Printf("Type %s doesn't have Init method\n", value.Type())
+		//log.Printf("Type %s doesn't have Init method\n", value.Type())
 		return nil
+	}
+
+	// Init method should have no return,
+	// or return just the resource itself for idiomatic reasons
+	if !isValidInit(method) {
+		log.Panicf("Resource %s has an invalid Init method, it should have no return,"+
+			" or just return the resource itself %s \n",
+			value.Type(), method.Type.In(0))
 	}
 
 	m := NewMethod(method)
 
-	log.Println("Scan Init method for", m.Method.Type)
+	//log.Println("Scan Init method for", m.Method.Type)
 
 	for _, input := range m.Inputs {
 
-		log.Printf("Init %s depends on %s\n", m.Method.Type, input)
+		//log.Printf("Init %s depends on %s\n", m.Method.Type, input)
 
 		handler.scanDependency(input, resource)
 	}

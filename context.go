@@ -29,7 +29,7 @@ func newContext(handler *Handler, w http.ResponseWriter, req *http.Request, idMa
 
 func (c *Context) run() []reflect.Value {
 
-	log.Println("Running Context Method", c.Handler.Method.Method.Type)
+	log.Println("Running Context Handler Method:", c.Handler.Method.Method.Type)
 
 	// Then run the main method
 	// c.Method.Input[0] = the Method Resource Type
@@ -48,24 +48,24 @@ func (c *Context) getInputs(m *Method) []reflect.Value {
 
 	inputs := make([]reflect.Value, len(inputsTypes))
 
-	log.Println("### Getting inputs:", inputsTypes)
+	log.Println("Getting inputs:", inputsTypes)
 
 	for i, t := range inputsTypes {
 
-		//log.Println("### Getting input", t)
+		//log.Println("Getting input", t)
 		inputs[i] = c.valueOf(t, requesterType)
-		//log.Println("### Getted", inputs[i], "for", t)
+		//log.Println("Getted", inputs[i], "for", t)
 
 		// If the input isn't a pointer, we have to transform in an element
 		// Especial ID case should not be treated
 		if t.Kind() != reflect.Ptr && t != IDType {
 			inputs[i] = inputs[i].Elem()
-			//log.Println("### Transformed", inputs[i], "for", t)
+			//log.Println("Transformed", inputs[i], "for", t)
 		}
 
 	}
 
-	//log.Println("### Returning inputs:", inputs, "for", inputsTypes)
+	//log.Println("Returning inputs:", inputs, "for", inputsTypes)
 
 	return inputs
 }
@@ -87,9 +87,9 @@ func (c *Context) valueOf(t reflect.Type, requesterType reflect.Type) reflect.Va
 		return c.idValue(requesterType)
 	}
 
-	// Normal struct cases
-	if t.Kind() == reflect.Struct {
-		return c.structValue(t)
+	// NonPointer Struct and Slices cases
+	if t.Kind() == reflect.Struct || t.Kind() == reflect.Slice {
+		return c.nonPtrValue(t)
 	}
 
 	if t.Kind() == reflect.Ptr {
@@ -118,7 +118,7 @@ func (c *Context) interfaceValue(t reflect.Type) reflect.Value {
 }
 
 // Get the reflect.Value for the Struct
-func (c *Context) structValue(t reflect.Type) reflect.Value {
+func (c *Context) nonPtrValue(t reflect.Type) reflect.Value {
 
 	for _, v := range c.Values {
 		if v.Type().Elem() == t {
@@ -169,39 +169,35 @@ func (c *Context) initDependencie(t reflect.Type) reflect.Value {
 		log.Panicf("Dependencie %s not mapped!!!", t)
 	}
 
-	log.Println("initDependencie Constructing dependency", dependencie.Value.Type())
+	log.Println("Constructing dependency", dependencie.Value.Type())
 
-	// This Value will be mapped in the index i
-	i := len(c.Values)
-
-	log.Println("### Initial value", dependencie.Value.Elem().Interface(), "for", t)
+	// This Value will be mapped in the index index
+	index := len(c.Values)
 
 	c.Values = append(c.Values, dependencie.Value)
 
 	if dependencie.Method != nil {
 
-		log.Println("initDependencie Has Init", dependencie.Method.Method.Type)
-
 		inputs := c.getInputs(dependencie.Method) //dependencie.Input, dependencie.Value.Type())
 
 		out := make([]reflect.Value, dependencie.Method.Method.Type.NumOut())
 
+		log.Printf("Calling %s with %q \n", dependencie.Method.Method.Type, inputs)
+
 		out = dependencie.Method.Method.Func.Call(inputs)
 
-		// Let's update the zeroValue for the constructed resource
-		if len(out) > 0 {
+		// If the Init method return something,
+		// it will be the resource itself with
+		// its values updated
+		if dependencie.Method.NumOut > 0 {
 
-			log.Println("*** Subst.", c.Values[i], "for", out[0])
+			log.Println("Replacing Initial value of", c.Values[index])
 
-			c.Values[i] = out[0]
+			c.Values[index] = out[0]
 		}
-	} else {
-		log.Println("initDependencie Has not Init")
 	}
 
-	log.Println("### Final value", c.Values[i].Elem().Interface(), "for", t)
+	log.Println("Constructed", c.Values[index], "for", t, "value", c.Values[index].Interface())
 
-	log.Println("initDependencie returned", c.Values[i], "for", t, "value", c.Values[i].Interface())
-
-	return c.Values[i]
+	return c.Values[index]
 }

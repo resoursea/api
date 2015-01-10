@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"log"
 	"reflect"
 	"strings"
 )
@@ -18,7 +17,7 @@ type Method struct {
 
 func NewMethod(method reflect.Method) *Method {
 
-	log.Println("Creating method", method)
+	//log.Println("Creating method", method)
 
 	m := &Method{
 		Name:    method.Name,

@@ -30,13 +30,13 @@ func (s *Server) Add(resource *Resource) error {
 
 // To implement http.Handler
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	log.Println("Serving the resource", req.URL.RequestURI())
+	log.Println("### Serving the resource", req.URL.RequestURI())
 
 	// Get the resource identfiers from the URL
 	// Remember to descart the first empty element of the list
 	uri := strings.Split(req.URL.RequestURI(), "/")[1:]
 
-	log.Printf("URI: %v\n", uri)
+	//log.Printf("URI: %v\n", uri)
 
 	handler, ids, err := s.Route.getHandler(uri, req.Method)
 	if err != nil {
@@ -44,7 +44,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Printf("Route [%s] %s got, ids: %q\n", handler.Name, req.URL.RequestURI(), ids)
+	log.Printf("Route found: [%s] %s ids: %q\n", handler.Name, req.URL.RequestURI(), ids)
 
 	context := newContext(handler, w, req, ids)
 

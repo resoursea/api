@@ -14,8 +14,8 @@ import (
 func TestResource(t *testing.T) {
 	a := A{
 		Name: "Testing",
-		X:    X{Test: "Tested"},
-		Bs:   BList{B{Name: "Started"}},
+		//X:    X{Test: "Tested"},
+		//Bs:   BList{B{Name: "Started"}},
 	}
 
 	resource := NewResource(a, "recurso")
@@ -40,7 +40,7 @@ func TestResource(t *testing.T) {
 	fmt.Println("\n3 ----------\n")
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/recurso/bs/123/cs/321", nil)
+	req, _ := http.NewRequest("GET", "/recurso", nil)
 
 	server.ServeHTTP(res, req)
 
@@ -58,14 +58,25 @@ type A struct {
 	Id   string
 	Name string
 	Bs   BList "Tag de Bs"
-	X
+	//X
 	//C C // conflit, name 'c' already used
+}
+
+func (a A) Init(b BList) {
+	log.Println("Init A received", b)
+	b[0].Name = "Changed"
+}
+
+func (a *A) GET(x A, b *BList) *A {
+	log.Println("GET A received", b)
+	return a
 }
 
 type BList []B
 
-func (b *BList) Init(c *C, d D) {
-	log.Println("*** BList Received", d)
+func (b *BList) Init() *BList {
+	//log.Println("*** BList Received", d)
+	return &BList{B{Name: "FUCKED"}}
 }
 
 func (b *BList) GET() *BList {
@@ -123,17 +134,7 @@ type X struct {
 
 //func (b *X) PUT() {}
 
-func (a *A) Init(b BList) *A {
-	return &A{}
-}
-
-func (a *A) GET(x A, i *BList) *A {
-	return a
-}
-
-func (a *A) doSomething() {}
-
-type InterfaceA interface {
+type DoSomething interface {
 	doSomething()
 }
 
@@ -144,6 +145,8 @@ type D struct {
 func (d *D) Init() {
 	d.Test = "TESTED"
 }
+
+func (d *D) doSomething() {}
 
 // Set the value passed by user on creation
 //ptrValue.Elem().Set(value)

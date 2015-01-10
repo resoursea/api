@@ -59,7 +59,7 @@ func scanStruct(value reflect.Value, field reflect.StructField, parent *Resource
 		log.Fatal("You should pass an struct or an slice of structs")
 	}
 
-	log.Println("Scanning Struct:", value.Type(), "slice:")
+	//log.Println("Scanning Struct:", value.Type(), "slice:")
 
 	resource := &Resource{
 		Name:       strings.ToLower(field.Name),
@@ -160,11 +160,22 @@ func (r *Resource) valueOf(t reflect.Type) (reflect.Value, error) {
 	// If it isn't present in the Resource tree
 	// and this type we are searching isn't an interface
 	// So we will use an empty new value for it!
+
+	// For Struct
 	if t.Kind() == reflect.Struct {
 		return reflect.New(t), nil // A new Ptr to Struct of this type
 	}
+	// For Ptr to Struct
 	if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct {
 		return reflect.New(t.Elem()), nil // A new Ptr to Struct of this type
+	}
+	// For Slice
+	if t.Kind() == reflect.Slice {
+		return reflect.New(t), nil
+	}
+	// For Ptr to Slice
+	if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Slice {
+		return reflect.New(t.Elem()), nil
 	}
 
 	return reflect.Value{}, fmt.Errorf(

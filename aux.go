@@ -157,3 +157,22 @@ func isSlice(t reflect.Type) bool {
 	}
 	return t.Kind() == reflect.Slice
 }
+
+// Init methods should have no Output,
+// it should alter the first argument as a pointer
+// Or, at least, return itself
+func isValidInit(method reflect.Method) bool {
+	// If it has no output it's accepted
+	if method.Type.NumOut() == 0 {
+		return true
+	}
+
+	// It could return just one resource, itself
+	if method.Type.NumOut() == 1 {
+		//log.Printf("### TESTING: %s \n", method.Type)
+		//log.Printf("### TESTING: %s, %s \n", method.Type.In(0), method.Type.Out(0))
+		return method.Type.In(0) == method.Type.Out(0)
+	}
+
+	return false
+}
