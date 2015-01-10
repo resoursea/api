@@ -10,16 +10,10 @@ type Dependency struct {
 	Value reflect.Value
 
 	// Init method and its input
-	Method reflect.Method
-	Input  []reflect.Type
+	Method *Method
 }
 
 type Dependencies map[reflect.Type]*Dependency
-
-// Return true if this dependency has a init method
-func (d *Dependency) hasInit() bool {
-	return d.Method.Type != nil
-}
 
 // This method checks if exist an value for the received type
 // If it already exist, but in indexed by another type

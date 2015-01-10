@@ -7,14 +7,18 @@ import (
 )
 
 type Context struct {
-	Method *Method
-	Values []reflect.Value
-	IDMap  IDMap
+	Handler *Handler
+	Values  []reflect.Value
+	IDMap   IDMap
 }
 
-func newContext(m *Method, w http.ResponseWriter, req *http.Request, idMap IDMap) *Context {
+// Creates a new context
+// It creates the initial state used to answer a request
+// Since states are not allowed to be stored on te server,
+// the request state is all the service has to answer a request
+func newContext(handler *Handler, w http.ResponseWriter, req *http.Request, idMap IDMap) *Context {
 	return &Context{
-		Method: m,
+		Handler: handler,
 		Values: []reflect.Value{
 			reflect.ValueOf(w),
 			reflect.ValueOf(req),
@@ -25,26 +29,26 @@ func newContext(m *Method, w http.ResponseWriter, req *http.Request, idMap IDMap
 
 func (c *Context) run() []reflect.Value {
 
-	log.Println("Running Method", c.Method.Method.Type)
-
-	//c.constructDependencies()
+	log.Println("Running Context Method", c.Handler.Method.Method.Type)
 
 	// Then run the main method
 	// c.Method.Input[0] = the Method Resource Type
-	inputs := c.getInputs(c.Method.Input, c.Method.Input[0])
+	inputs := c.getInputs(c.Handler.Method)
 
-	out := c.Method.Method.Func.Call(inputs)
-
-	return out
+	return c.Handler.Method.Method.Func.Call(inputs)
 }
 
 // Return the inputs from a list of requested types
 // For the especial case of the ID input, we should know the requesterType
-func (c *Context) getInputs(inputsTypes []reflect.Type, requesterType reflect.Type) []reflect.Value {
+func (c *Context) getInputs(m *Method) []reflect.Value {
+
+	inputsTypes := m.Inputs
+
+	requesterType := m.Owner
 
 	inputs := make([]reflect.Value, len(inputsTypes))
 
-	//log.Println("### Getting inputs:", inputsTypes)
+	log.Println("### Getting inputs:", inputsTypes)
 
 	for i, t := range inputsTypes {
 
@@ -53,7 +57,8 @@ func (c *Context) getInputs(inputsTypes []reflect.Type, requesterType reflect.Ty
 		//log.Println("### Getted", inputs[i], "for", t)
 
 		// If the input isn't a pointer, we have to transform in an element
-		if t.Kind() != reflect.Ptr {
+		// Especial ID case should not be treated
+		if t.Kind() != reflect.Ptr && t != IDType {
 			inputs[i] = inputs[i].Elem()
 			//log.Println("### Transformed", inputs[i], "for", t)
 		}
@@ -159,7 +164,7 @@ func (c *Context) idValue(t reflect.Type) reflect.Value {
 // Garants that every dependencie exists before be requisited
 func (c *Context) initDependencie(t reflect.Type) reflect.Value {
 
-	dependencie, exist := c.Method.Dependencies[t]
+	dependencie, exist := c.Handler.Dependencies[t]
 	if !exist { // It should never occours
 		log.Panicf("Dependencie %s not mapped!!!", t)
 	}
@@ -173,15 +178,15 @@ func (c *Context) initDependencie(t reflect.Type) reflect.Value {
 
 	c.Values = append(c.Values, dependencie.Value)
 
-	if dependencie.hasInit() {
+	if dependencie.Method != nil {
 
-		log.Println("initDependencie Has Init", dependencie.Method.Type)
+		log.Println("initDependencie Has Init", dependencie.Method.Method.Type)
 
-		inputs := c.getInputs(dependencie.Input, dependencie.Value.Type())
+		inputs := c.getInputs(dependencie.Method) //dependencie.Input, dependencie.Value.Type())
 
-		out := make([]reflect.Value, dependencie.Method.Type.NumOut())
+		out := make([]reflect.Value, dependencie.Method.Method.Type.NumOut())
 
-		out = dependencie.Method.Func.Call(inputs)
+		out = dependencie.Method.Method.Func.Call(inputs)
 
 		// Let's update the zeroValue for the constructed resource
 		if len(out) > 0 {

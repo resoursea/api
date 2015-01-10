@@ -40,7 +40,7 @@ func TestResource(t *testing.T) {
 	fmt.Println("\n3 ----------\n")
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/recurso/bs/", nil)
+	req, _ := http.NewRequest("GET", "/recurso/bs/123", nil)
 
 	server.ServeHTTP(res, req)
 
@@ -59,13 +59,13 @@ type A struct {
 	Name string
 	Bs   BList "Tag de Bs"
 	X
-	//C C // conflit
+	//C C // conflit, name 'c' already used
 }
 
 type BList []B
 
 func (b *BList) Init(c *C, d D) {
-	log.Println("*** BList Received", c)
+	log.Println("*** BList Received", d)
 }
 
 func (b *BList) GET() *BList {
@@ -75,7 +75,18 @@ func (b *BList) GET() *BList {
 type B struct {
 	Id   int
 	Name string
-	C    C "Tag de C"
+	//d    D
+	//Cs CList "Tag de C"
+}
+
+func (b *B) Init(id ID) *B {
+	log.Println("*** ID Received", id)
+	b.Name = id.String()
+	b.Id, _ = id.Int()
+	return b
+}
+func (b *B) GET(id ID) *B {
+	return b
 }
 
 func (b *B) PUT() {}
@@ -84,9 +95,19 @@ type C struct {
 	Nothing string
 }
 
-func (c *C) Init(d D) {
+func (c *C) Init() {
 	c.Nothing = "Initialized ok"
-	log.Println("*** C Received", d)
+	//log.Println("*** C Received", d)
+}
+
+type CList []B
+
+func (c *CList) Init(id ID) {
+	log.Println("*** CList Received ID:", id)
+}
+
+func (c *CList) GET() *CList {
+	return c
 }
 
 //func (c *C) PUT(d *D) {}

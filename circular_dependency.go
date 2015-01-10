@@ -25,22 +25,23 @@ func circularDependency(r *Route) error {
 
 func (c *CircularDependency) checkRoute(r *Route) error {
 
-	for _, m := range r.Methods {
+	for _, h := range r.Handlers {
 
-		//log.Println("Check CD for", m.Method)
+		log.Println("Check CD for", h.Method.Method)
 
-		for _, d := range m.Dependencies {
+		for _, d := range h.Dependencies {
 			// It's necessary cause we will have many depenedencies
 			// indexed by differente types
 			if c.notChecked(d) {
 
-				//log.Println("###Checking", index, " : ", d.Value.Type())
+				//log.Println("###Checking : ", d.Value.Type())
 
-				err := c.checkDependency(d, m.Dependencies)
+				err := c.checkDependency(d, h.Dependencies)
 				if err != nil {
 					return err
 				}
 
+				// Add this dependency to the checked list
 				c.Checked = append(c.Checked, d)
 			}
 		}
@@ -65,10 +66,16 @@ func (c *CircularDependency) checkDependency(dependency *Dependency, dependencie
 		return err
 	}
 
-	for i, t := range dependency.Input {
+	for i, t := range dependency.Method.Inputs {
 
 		// The first element will always be the dependency itself
 		if i == 0 {
+			continue
+		}
+
+		// IDs types desn't need to be declared,
+		// cause it will be present in the context
+		if t == IDType {
 			continue
 		}
 

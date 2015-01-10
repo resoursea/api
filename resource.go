@@ -59,7 +59,7 @@ func scanStruct(value reflect.Value, field reflect.StructField, parent *Resource
 		log.Fatal("You should pass an struct or an slice of structs")
 	}
 
-	//log.Println("Scanning Struct:", value.Type(), "slice:")
+	log.Println("Scanning Struct:", value.Type(), "slice:")
 
 	resource := &Resource{
 		Name:       strings.ToLower(field.Name),
@@ -75,6 +75,15 @@ func scanStruct(value reflect.Value, field reflect.StructField, parent *Resource
 	// Add this resource as child of its parent if it is not the root
 	// If this resource is an anonymous field, add as anonymous
 	if parent != nil {
+
+		// Check for circular dependency !!!
+		exist, p := parent.existParent(resource)
+		if exist {
+			printResourceStack(resource, resource)
+			log.Fatalf("The resource %s as '%s' have an circular dependency in %s as '%s'",
+				resource.Type(), resource.Name, p.Type(), p.Name)
+		}
+
 		parent.addChild(resource)
 	}
 
@@ -197,4 +206,47 @@ func (r *Resource) isType(t reflect.Type) (reflect.Value, bool) {
 // Return true if this Resrouce have an Slice type
 func (r *Resource) isSlice() bool {
 	return r.SliceValue.IsValid()
+}
+
+// Return true any of its father have the same type of this resrouce
+// this method prevent for Circular Dependency
+func (r *Resource) existParent(resource *Resource) (bool, *Resource) {
+
+	if r.isEqual(resource) {
+		return true, r
+	}
+
+	if r.Parent != nil {
+		return r.Parent.existParent(resource)
+	}
+
+	return false, nil
+}
+
+// Return true if this Resrouce is from by this Type
+func (r *Resource) isEqual(resource *Resource) bool {
+	return r.Type() == resource.Type()
+}
+
+// Return true if this Resrouce is from by this Type
+func (r *Resource) Type() reflect.Type {
+	return r.Value.Type()
+}
+
+// Return true if this Resrouce is from by this Type
+func (r *Resource) SliceType() reflect.Type {
+	return r.SliceValue.Type()
+}
+
+func (r *Resource) String() string {
+
+	name := "[" + r.Name + "]"
+
+	response := fmt.Sprintf("%-14s %24s", name, r.Type().String())
+
+	if r.isSlice() {
+		response += fmt.Sprintf(" %24s", "[]"+r.SliceType().String())
+	}
+
+	return response
 }

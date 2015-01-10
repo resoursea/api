@@ -16,8 +16,8 @@ type Route struct {
 
 	// Methods by its name, the HTTP action name
 	// They are separated in methods for set and for unit
-	SliceMethods map[string]*Method
-	Methods      map[string]*Method
+	SliceHandlers map[string]*Handler
+	Handlers      map[string]*Handler
 
 	// map[URI]*Route
 	Children map[string]*Route
@@ -33,12 +33,12 @@ func NewRoute(resource *Resource) *Route {
 	//log.Println("###Building routes for", resource.Value.Type())
 
 	route := &Route{
-		URI:          resource.Name,
-		Value:        resource.Value,
-		SliceMethods: make(map[string]*Method),
-		Methods:      make(map[string]*Method),
-		Children:     make(map[string]*Route),
-		IsSlice:      resource.isSlice(),
+		URI:           resource.Name,
+		Value:         resource.Value,
+		SliceHandlers: make(map[string]*Handler),
+		Handlers:      make(map[string]*Handler),
+		Children:      make(map[string]*Route),
+		IsSlice:       resource.isSlice(),
 	}
 
 	// This route take the methods of the main resource...
@@ -86,31 +86,40 @@ func (r *Route) ScanResource(resource *Resource) {
 // This type could be []*Resource or just *Resource
 func (r *Route) ScanType(t reflect.Type, resource *Resource) {
 
-	//log.Println("Scanning methods from type", t, isSlice(t))
+	log.Println("Scanning methods from type", t, isSlice(t))
 
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
+
 		if isMappedMethod(m) {
-			method := NewMethod(m, resource)
+
+			method := NewMethod(m)
+			h := NewHandler(resource, method)
+
 			if isSlice(t) {
-				r.SliceMethods[method.Name] = method
+				r.SliceHandlers[h.Name] = h
 			} else {
-				r.Methods[method.Name] = method
+				r.Handlers[h.Name] = h
 			}
+
 		}
 	}
 
 }
 
 // Return false if this route have no methods declared
-func (r *Route) hasMethod() bool {
+func (r *Route) hasHandler() bool {
 
-	if len(r.Methods) > 0 {
+	if len(r.Handlers) > 0 {
+		return true
+	}
+
+	if len(r.SliceHandlers) > 0 {
 		return true
 	}
 
 	for _, child := range r.Children {
-		if child.hasMethod() {
+		if child.hasHandler() {
 			return true
 		}
 	}
@@ -120,19 +129,22 @@ func (r *Route) hasMethod() bool {
 
 // Add a new route child
 func (r *Route) addChild(child *Route) error {
-	// Add this route to the tree only if it has mapped methods
-	if child.hasMethod() {
+	// Add this route to the tree only if it has handlers
+	if child.hasHandler() {
+
+		// Test if this URI wasn't in use yet
 		_, exist := r.Children[child.URI]
 		if exist {
 			return errors.New("Route " + r.URI + " already has child " + child.URI)
 		}
+
 		r.Children[child.URI] = child
 	}
 	return nil
 }
 
 // Return the Route from the especified URI
-func (r *Route) getMethod(uri []string, method string) (*Method, IDMap, error) {
+func (r *Route) getHandler(uri []string, method string) (*Handler, IDMap, error) {
 
 	useSliceMethods := false
 
@@ -142,7 +154,7 @@ func (r *Route) getMethod(uri []string, method string) (*Method, IDMap, error) {
 	// Store the IDs of the resources took in the url
 	ids := IDMap{}
 
-	log.Println("Getting Route", next)
+	log.Println("Getting Handler", next)
 
 	route, exist := r.Children[next]
 	if !exist {
@@ -164,36 +176,38 @@ func (r *Route) getMethod(uri []string, method string) (*Method, IDMap, error) {
 		}
 	}
 
-	var m *Method
+	var h *Handler
 
 	// If we need to search deeply in the tree
 	if len(uri) > 0 && len(uri[0]) > 0 {
 
-		childMethod, childIds, err := route.getMethod(uri, method)
+		childHandler, childIds, err := route.getHandler(uri, method)
 		if err != nil {
 			return nil, ids, err
 		}
-		m = childMethod
-		ids.add(childIds)
+		h = childHandler
+		ids.extend(childIds)
 
 	} else {
 
 		// If we are on the final Route user requested
 		if useSliceMethods {
-			m, exist = route.SliceMethods[method]
+			h, exist = route.SliceHandlers[method]
 		} else {
-			m, exist = route.Methods[method]
+			h, exist = route.Handlers[method]
 		}
 
 		if !exist {
 			msg := "Resource '" + route.URI + "' doesn't have method " + method
 			if useSliceMethods {
-				msg += " *in the slice"
+				msg += " in the slice"
+			} else {
+				msg += " in the element"
 			}
 			return nil, ids, errors.New(msg)
 		}
 
 	}
 
-	return m, ids, nil
+	return h, ids, nil
 }

@@ -38,23 +38,23 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	log.Printf("URI: %v\n", uri)
 
-	method, ids, err := s.Route.getMethod(uri, req.Method)
+	handler, ids, err := s.Route.getHandler(uri, req.Method)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	log.Printf("Route [%s] %s got, ids: %q\n", method.Name, req.URL.RequestURI(), ids)
+	log.Printf("Route [%s] %s got, ids: %q\n", handler.Name, req.URL.RequestURI(), ids)
 
-	context := newContext(method, w, req, ids)
+	context := newContext(handler, w, req, ids)
 
 	output := context.run()
 
 	// Trans form the method output into an slice of the values
 	// * Needed to generate a JSON response
-	response := make([]interface{}, len(output))
+	response := make(map[string]interface{}, handler.Method.NumOut)
 	for i, v := range output {
-		response[i] = v.Interface()
+		response[handler.Method.OutName[i]] = v.Interface()
 	}
 
 	// Compile our response in JSON

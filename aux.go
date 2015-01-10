@@ -106,6 +106,24 @@ func elemOfType(t reflect.Type) reflect.Type {
 	return t
 }
 
+// If Type is a Slice, return the Type of the Elem it stores
+func elemOfSliceType(t reflect.Type) reflect.Type {
+	if t.Kind() == reflect.Slice {
+		return t.Elem()
+	}
+	return t
+}
+
+// If Type is a Ptr, return the Type of the Elem it points to
+// If Type is a Slice, return the Type of the Elem it stores
+func mainElemOfType(t reflect.Type) reflect.Type {
+	t = elemOfType(t)
+	t = elemOfSliceType(t)
+	t = elemOfType(t)
+	return t
+
+}
+
 // If Type is not a Ptr, return the one Type that points to it
 func ptrOfType(t reflect.Type) reflect.Type {
 	if t.Kind() != reflect.Ptr {

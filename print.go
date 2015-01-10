@@ -2,6 +2,7 @@ package resource
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 )
@@ -39,12 +40,12 @@ func printRoute(r *Route, lvl int) {
 
 	fmt.Println()
 
-	for _, m := range r.SliceMethods {
-		printMethod(m, true, lvl+1)
+	for _, h := range r.SliceHandlers {
+		printHandler(h, true, lvl+1)
 	}
 
-	for _, m := range r.Methods {
-		printMethod(m, false, lvl+1)
+	for _, h := range r.Handlers {
+		printHandler(h, false, lvl+1)
 	}
 
 	for _, c := range r.Children {
@@ -52,16 +53,16 @@ func printRoute(r *Route, lvl int) {
 	}
 }
 
-func printMethod(m *Method, isSlice bool, lvl int) {
+func printHandler(h *Handler, isSlice bool, lvl int) {
 	fmt.Printf("%s ", strings.Repeat("|	", lvl)+"| -")
 
 	if isSlice {
 		fmt.Printf("[] ")
 	}
 
-	fmt.Println(m.Name + "()   Dependencies:")
+	fmt.Println(h.Name + "()   Dependencies:")
 
-	for t, d := range m.Dependencies {
+	for t, d := range h.Dependencies {
 		printDependency(t, d, lvl+1)
 	}
 
@@ -70,16 +71,34 @@ func printMethod(m *Method, isSlice bool, lvl int) {
 func printDependency(t reflect.Type, d *Dependency, lvl int) {
 	fmt.Printf("%s %-24s as %-24s", strings.Repeat("|	", lvl)+"-", t, d.Value.Type())
 
-	if d.hasInit() {
+	if d.Method != nil {
 		fmt.Printf(" Init Input:")
 	} else {
 		fmt.Printf(" Desn't have Init method")
 	}
 
-	for _, input := range d.Input {
+	for _, input := range d.Method.Inputs {
 		fmt.Printf(" %-24s", input)
 	}
 
 	fmt.Println()
+
+}
+
+// Print the Resource the stack,
+// marking some resource within the stack
+// It is used to alert user for circular dependency
+// in the resource relationships
+func printResourceStack(resource, mark *Resource) {
+
+	if resource.Parent != nil {
+		printResourceStack(resource.Parent, mark)
+	}
+
+	if resource.isEqual(mark) {
+		log.Printf("*** -> %s\n", resource.String())
+	} else {
+		log.Printf("    -> %s\n", resource.String())
+	}
 
 }
