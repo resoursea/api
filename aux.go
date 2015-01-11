@@ -1,4 +1,4 @@
-package resource
+package api
 
 import (
 	"log"
@@ -8,30 +8,32 @@ import (
 )
 
 // This constants will be used on the method above
-var ResponseWriterPtrType = reflect.TypeOf((*http.ResponseWriter)(nil))
-var ResponseWriterType = ResponseWriterPtrType.Elem()
-var RequestPtrType = reflect.TypeOf((*http.Request)(nil))
-var RequestType = RequestPtrType.Elem()
+var (
+	responseWriterPtrType = reflect.TypeOf((*http.ResponseWriter)(nil))
+	tesponseWriterType    = responseWriterPtrType.Elem()
+	requestPtrType        = reflect.TypeOf((*http.Request)(nil))
+	requestType           = requestPtrType.Elem()
+)
 
 // This method return true if the received type is an context type
 // It means that it doesn't need to be mapped and will be present in the context
 // It also return an error message if user used *http.ResponseWriter or used http.Request
 func isContextType(resourceType reflect.Type) bool {
 	// Test if user used *http.ResponseWriter insted of http.ResponseWriter
-	if resourceType.AssignableTo(ResponseWriterPtrType) {
-		log.Fatalf("You asked for %s when you should used %s", resourceType, ResponseWriterType)
+	if resourceType.AssignableTo(responseWriterPtrType) {
+		log.Fatalf("You asked for %s when you should used %s", resourceType, tesponseWriterType)
 	}
 	// Test if user used http.Request insted of *http.Request
-	if resourceType.AssignableTo(RequestType) {
-		log.Fatalf("You asked for %s when you should used %s", resourceType, RequestPtrType)
+	if resourceType.AssignableTo(requestType) {
+		log.Fatalf("You asked for %s when you should used %s", resourceType, requestPtrType)
 	}
 	// Test if user used *ID insted of ID
-	if resourceType.AssignableTo(IDPtrType) {
-		log.Fatalf("You asked for %s when you should used %s", IDPtrType, IDType)
+	if resourceType.AssignableTo(idPtrType) {
+		log.Fatalf("You asked for %s when you should used %s", idPtrType, idType)
 	}
-	return resourceType.AssignableTo(ResponseWriterType) ||
-		resourceType.AssignableTo(RequestPtrType) ||
-		resourceType == IDType
+	return resourceType.AssignableTo(tesponseWriterType) ||
+		resourceType.AssignableTo(requestPtrType) ||
+		resourceType == idType
 }
 
 // Return if this method should be mapped or not

@@ -1,4 +1,4 @@
-package resource
+package api
 
 import (
 	"log"
@@ -6,28 +6,28 @@ import (
 	"reflect"
 )
 
-type Context struct {
-	Handler *Handler
+type context struct {
+	Handler *handler
 	Values  []reflect.Value
-	IDMap   IDMap
+	IDMap   idMap
 }
 
 // Creates a new context
 // It creates the initial state used to answer a request
 // Since states are not allowed to be stored on te server,
 // the request state is all the service has to answer a request
-func newContext(handler *Handler, w http.ResponseWriter, req *http.Request, idMap IDMap) *Context {
-	return &Context{
+func newContext(handler *handler, w http.ResponseWriter, req *http.Request, ids idMap) *context {
+	return &context{
 		Handler: handler,
 		Values: []reflect.Value{
 			reflect.ValueOf(w),
 			reflect.ValueOf(req),
 		},
-		IDMap: idMap,
+		IDMap: ids,
 	}
 }
 
-func (c *Context) run() []reflect.Value {
+func (c *context) run() []reflect.Value {
 
 	log.Println("Running Context Handler Method:", c.Handler.Method.Method.Type)
 
@@ -40,7 +40,7 @@ func (c *Context) run() []reflect.Value {
 
 // Return the inputs from a list of requested types
 // For the especial case of the ID input, we should know the requesterType
-func (c *Context) getInputs(m *Method) []reflect.Value {
+func (c *context) getInputs(m *method) []reflect.Value {
 
 	inputsTypes := m.Inputs
 
@@ -58,7 +58,7 @@ func (c *Context) getInputs(m *Method) []reflect.Value {
 
 		// If the input isn't a pointer, we have to transform in an element
 		// Especial ID case should not be treated
-		if t.Kind() != reflect.Ptr && t != IDType {
+		if t.Kind() != reflect.Ptr && t != idType {
 			inputs[i] = inputs[i].Elem()
 			//log.Println("Transformed", inputs[i], "for", t)
 		}
@@ -72,7 +72,7 @@ func (c *Context) getInputs(m *Method) []reflect.Value {
 
 // Get the reflect.Value for the Interface
 // it will ever exist
-func (c *Context) valueOf(t reflect.Type, requesterType reflect.Type) reflect.Value {
+func (c *context) valueOf(t reflect.Type, requesterType reflect.Type) reflect.Value {
 
 	log.Println("Searching for", t)
 
@@ -83,7 +83,7 @@ func (c *Context) valueOf(t reflect.Type, requesterType reflect.Type) reflect.Va
 	// It's an struct
 
 	// Especial case for ID request
-	if t == IDType {
+	if t == idType {
 		return c.idValue(requesterType)
 	}
 
@@ -105,7 +105,7 @@ func (c *Context) valueOf(t reflect.Type, requesterType reflect.Type) reflect.Va
 }
 
 // Get the reflect.Value for the Interface
-func (c *Context) interfaceValue(t reflect.Type) reflect.Value {
+func (c *context) interfaceValue(t reflect.Type) reflect.Value {
 
 	for _, v := range c.Values {
 		if v.Type().Implements(t) {
@@ -118,7 +118,7 @@ func (c *Context) interfaceValue(t reflect.Type) reflect.Value {
 }
 
 // Get the reflect.Value for the Struct
-func (c *Context) nonPtrValue(t reflect.Type) reflect.Value {
+func (c *context) nonPtrValue(t reflect.Type) reflect.Value {
 
 	for _, v := range c.Values {
 		if v.Type().Elem() == t {
@@ -131,7 +131,7 @@ func (c *Context) nonPtrValue(t reflect.Type) reflect.Value {
 }
 
 // Get the reflect.Value for the Ptr to Struct
-func (c *Context) ptrValue(t reflect.Type) reflect.Value {
+func (c *context) ptrValue(t reflect.Type) reflect.Value {
 
 	for _, v := range c.Values {
 		if v.Type() == t {
@@ -145,7 +145,7 @@ func (c *Context) ptrValue(t reflect.Type) reflect.Value {
 
 // Get the reflect.Value for the ID list caught in the URI
 // It returns an empty ID if ID were not passed in the URI
-func (c *Context) idValue(t reflect.Type) reflect.Value {
+func (c *context) idValue(t reflect.Type) reflect.Value {
 
 	id, exist := c.IDMap[t]
 	if exist {
@@ -153,7 +153,7 @@ func (c *Context) idValue(t reflect.Type) reflect.Value {
 	}
 
 	// Doesn't exist, returning an empty default ID
-	return EmptyIDValue
+	return emptyIDValue
 }
 
 //
@@ -162,7 +162,7 @@ func (c *Context) idValue(t reflect.Type) reflect.Value {
 
 // Construct all the dependencies level by level
 // Garants that every dependencie exists before be requisited
-func (c *Context) initDependencie(t reflect.Type) reflect.Value {
+func (c *context) initDependencie(t reflect.Type) reflect.Value {
 
 	dependencie, exist := c.Handler.Dependencies[t]
 	if !exist { // It should never occours

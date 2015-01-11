@@ -1,33 +1,33 @@
-package resource
+package api
 
 import (
 	"log"
 	"reflect"
 )
 
-type Handler struct {
+type handler struct {
 	Name   string
-	Method *Method
+	Method *method
 	// Many Types could poiny to the same dependencie
 	// It could occour couse could have any number of Interfaces
 	// that could be satisfied by a single dependency
-	Dependencies Dependencies
+	Dependencies dependencies
 }
 
-func NewHandler(resource *Resource, method *Method) *Handler {
+func newHandler(r *resource, m *method) *handler {
 
 	//log.Println("Creating Handler", method.Name, "for resource", resource.Name)
 
-	h := &Handler{
-		Name:         method.Name,
-		Method:       method,
-		Dependencies: make(map[reflect.Type]*Dependency),
+	h := &handler{
+		Name:         m.Name,
+		Method:       m,
+		Dependencies: make(map[reflect.Type]*dependency),
 	}
 
 	// So we scan all dependencies to create a tree
-	for _, input := range method.Inputs {
+	for _, input := range m.Inputs {
 		// Scan this dependency and its dependencies recursively
-		h.scanDependency(input, resource)
+		h.scanDependency(input, r)
 	}
 
 	return h
@@ -36,7 +36,7 @@ func NewHandler(resource *Resource, method *Method) *Handler {
 // Scan the dependencies recursively and add it to the method
 // This method ensures that all dependencies will be present
 // when the dependent want then
-func (h *Handler) scanDependency(dependencyType reflect.Type, resource *Resource) {
+func (h *handler) scanDependency(dependencyType reflect.Type, r *resource) {
 
 	log.Println("Scanning dependency", dependencyType)
 
@@ -63,12 +63,12 @@ func (h *Handler) scanDependency(dependencyType reflect.Type, resource *Resource
 	// we should search which resource satisfies this Interface
 	// If this is a Struct, just find for the initial value,
 	// if doesn't exist, create one and return it
-	value, err := resource.valueOf(dependencyType)
+	value, err := r.valueOf(dependencyType)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	d := &Dependency{
+	d := &dependency{
 		Value:  value,
 		Method: nil,
 	}
@@ -79,12 +79,12 @@ func (h *Handler) scanDependency(dependencyType reflect.Type, resource *Resource
 
 	log.Printf("Created dependency %s to use as %s\n", value, dependencyType)
 
-	d.Method = scanInit(value, h, resource)
+	d.Method = scanInit(value, h, r)
 
 }
 
 // Scan the dependencies of the Init method of some type
-func scanInit(value reflect.Value, handler *Handler, resource *Resource) *Method {
+func scanInit(value reflect.Value, h *handler, r *resource) *method {
 
 	method, exists := value.Type().MethodByName("Init")
 	if !exists {
@@ -100,7 +100,7 @@ func scanInit(value reflect.Value, handler *Handler, resource *Resource) *Method
 			value.Type(), method.Type.In(0))
 	}
 
-	m := NewMethod(method)
+	m := newMethod(method)
 
 	//log.Println("Scan Init method for", m.Method.Type)
 
@@ -108,7 +108,7 @@ func scanInit(value reflect.Value, handler *Handler, resource *Resource) *Method
 
 		//log.Printf("Init %s depends on %s\n", m.Method.Type, input)
 
-		handler.scanDependency(input, resource)
+		h.scanDependency(input, r)
 	}
 
 	return m

@@ -1,4 +1,4 @@
-package resource
+package api
 
 import (
 	"errors"
@@ -7,25 +7,25 @@ import (
 	"reflect"
 )
 
-type CircularDependency struct {
-	Checked    []*Dependency
+type circularDependency struct {
+	Checked    []*dependency
 	Dependents []reflect.Type
 }
 
-func circularDependency(r *Route) error {
-	c := &CircularDependency{
+func checkCircularDependency(ro *route) error {
+	c := &circularDependency{
 		Dependents: []reflect.Type{},
 	}
-	err := c.checkRoute(r)
+	err := c.checkRoute(ro)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *CircularDependency) checkRoute(r *Route) error {
+func (c *circularDependency) checkRoute(ro *route) error {
 
-	for _, h := range r.Handlers {
+	for _, h := range ro.Handlers {
 
 		//log.Println("Check CD for", h.Method.Method)
 
@@ -47,7 +47,7 @@ func (c *CircularDependency) checkRoute(r *Route) error {
 		}
 	}
 
-	for _, child := range r.Children {
+	for _, child := range ro.Children {
 		err := c.checkRoute(child)
 		if err != nil {
 			return err
@@ -57,7 +57,7 @@ func (c *CircularDependency) checkRoute(r *Route) error {
 	return nil
 }
 
-func (c *CircularDependency) checkDependency(dependency *Dependency, dependencies Dependencies) error {
+func (c *circularDependency) checkDependency(dependency *dependency, dependencies dependencies) error {
 
 	// Add this dependency type to the dependency list
 	err := c.add(dependency.Value.Type())
@@ -75,7 +75,7 @@ func (c *CircularDependency) checkDependency(dependency *Dependency, dependencie
 
 		// IDs types desn't need to be declared,
 		// cause it will be present in the context
-		if t == IDType {
+		if t == idType {
 			continue
 		}
 
@@ -94,7 +94,7 @@ func (c *CircularDependency) checkDependency(dependency *Dependency, dependencie
 
 // Checks whether the Dependents doesn't fall into a circular dependency
 // Add a new type to the Dependents list
-func (c *CircularDependency) add(t reflect.Type) error {
+func (c *circularDependency) add(t reflect.Type) error {
 
 	// Check for circular dependency
 	ok := true
@@ -123,12 +123,12 @@ func (c *CircularDependency) add(t reflect.Type) error {
 }
 
 // Remove the last element from the Dependents list
-func (c *CircularDependency) pop() {
+func (c *circularDependency) pop() {
 	//log.Println("Removing:", c.Dependents[len(c.Dependents)-1])
 	c.Dependents = c.Dependents[:len(c.Dependents)-1]
 }
 
-func (c *CircularDependency) notChecked(dependency *Dependency) bool {
+func (c *circularDependency) notChecked(dependency *dependency) bool {
 	for _, d := range c.Checked {
 		if dependency == d {
 			return false

@@ -1,4 +1,4 @@
-package resource
+package api
 
 import (
 	"reflect"
@@ -11,17 +11,17 @@ import (
 // ans its child will receive the ID 321 when asked for it
 type ID string
 
-type IDMap map[reflect.Type]reflect.Value
+type idMap map[reflect.Type]reflect.Value
 
-var IDType = reflect.TypeOf(ID(""))
+var idType = reflect.TypeOf(ID(""))
 
-var IDPtrType = reflect.TypeOf(reflect.New(IDType))
+var idPtrType = reflect.TypeOf(reflect.New(idType))
 
-var EmptyIDValue = reflect.ValueOf(ID(""))
+var emptyIDValue = reflect.ValueOf(ID(""))
 
-func (ids IDMap) extend(idMap IDMap) {
-	for t, v := range idMap {
-		ids[t] = v
+func (i idMap) extend(ids idMap) {
+	for t, v := range ids {
+		i[t] = v
 	}
 }
 

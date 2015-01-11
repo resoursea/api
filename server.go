@@ -1,4 +1,4 @@
-package resource
+package api
 
 import (
 	"encoding/json"
@@ -9,19 +9,19 @@ import (
 
 type Server struct {
 	// The Root Route
-	Route *Route
+	Route *route
 }
 
 // Creates a new server with a new root Route
 func NewServer() *Server {
 	return &Server{
-		Route: &Route{Children: make(map[string]*Route)},
+		Route: &route{Children: make(map[string]*route)},
 	}
 }
 
 // Add a new resource to the root Route
-func (s *Server) Add(resource *Resource) error {
-	err := s.Route.addChild(NewRoute(resource))
+func (s *Server) Add(r *resource) error {
+	err := s.Route.addChild(NewRoute(r))
 	if err != nil {
 		return err
 	}
@@ -66,4 +66,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(responseJson)
+}
+
+func (s *Server) Run(addr string) {
+	log.Println("Listening on %s", addr)
+	log.Fatal(http.ListenAndServe(addr, s))
 }

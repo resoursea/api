@@ -1,4 +1,4 @@
-package resource
+package api
 
 import (
 	"fmt"
@@ -8,13 +8,13 @@ import (
 )
 
 // We are storing the Pointer to Struct value and Pointer to Slice as Value
-type Resource struct {
+type resource struct {
 	Name       string
 	Value      reflect.Value
 	SliceValue reflect.Value
-	Parent     *Resource
-	Children   []*Resource
-	Extends    []*Resource // Spot for Anonymous fields
+	Parent     *resource
+	Children   []*resource
+	Extends    []*resource // Spot for Anonymous fields
 	Anonymous  bool        // Is Anonymous field?
 	Tag        reflect.StructTag
 }
@@ -22,7 +22,7 @@ type Resource struct {
 // Creates a new resource
 // Receives the object to be mappen in a new Resource
 // and receive the field name and field tag as optional arguments
-func NewResource(object interface{}, args ...string) *Resource {
+func NewResource(object interface{}, args ...string) *resource {
 
 	value := reflect.ValueOf(object)
 
@@ -50,7 +50,7 @@ func NewResource(object interface{}, args ...string) *Resource {
 	return scanStruct(value, field, nil)
 }
 
-func scanStruct(value reflect.Value, field reflect.StructField, parent *Resource) *Resource {
+func scanStruct(value reflect.Value, field reflect.StructField, parent *resource) *resource {
 
 	// If its a Ptr or a Slice or both, get the Ptr to Struct value
 	value, sliceValue, isValid := getPtrValues(value)
@@ -61,13 +61,13 @@ func scanStruct(value reflect.Value, field reflect.StructField, parent *Resource
 
 	//log.Println("Scanning Struct:", value.Type(), "slice:")
 
-	resource := &Resource{
+	r := &resource{
 		Name:       strings.ToLower(field.Name),
 		Value:      value,
 		SliceValue: sliceValue,
 		Parent:     parent,
-		Children:   []*Resource{},
-		Extends:    []*Resource{},
+		Children:   []*resource{},
+		Extends:    []*resource{},
 		Anonymous:  field.Anonymous,
 		Tag:        field.Tag,
 	}
@@ -77,14 +77,14 @@ func scanStruct(value reflect.Value, field reflect.StructField, parent *Resource
 	if parent != nil {
 
 		// Check for circular dependency !!!
-		exist, p := parent.existParent(resource)
+		exist, p := parent.existParent(r)
 		if exist {
-			printResourceStack(resource, resource)
+			printResourceStack(r, r)
 			log.Fatalf("The resource %s as '%s' have an circular dependency in %s as '%s'",
-				resource.Type(), resource.Name, p.Type(), p.Name)
+				r.Type(), r.Name, p.Type(), p.Name)
 		}
 
-		parent.addChild(resource)
+		parent.addChild(r)
 	}
 
 	//log.Println("Scanning Fields:", value.Elem().Type())
@@ -97,17 +97,17 @@ func scanStruct(value reflect.Value, field reflect.StructField, parent *Resource
 		//log.Println("Field:", field.Name, field.Type, "of", value.Elem().Type())
 
 		if isValidValue(fieldValue) {
-			scanStruct(fieldValue, field, resource)
+			scanStruct(fieldValue, field, r)
 		}
 	}
 
-	return resource
+	return r
 }
 
 // The child should be added to the first non anonymous father
 // An anonymous field indicates that the containing non anonymous parent Struct
 // should have all the fields and methos this anonymous field has
-func (parent *Resource) addChild(resource *Resource) {
+func (parent *resource) addChild(resource *resource) {
 	//log.Printf("%s Anonymous: %v adding Child %s",
 	//	parent.Value.Type(), parent.Anonymous, resource.Value.Type())
 
@@ -135,7 +135,7 @@ func (parent *Resource) addChild(resource *Resource) {
 // Return Value of the implementation of some Interface
 // This Resource that satisfies this interface
 // should be present in this Resource or in its parents recursively
-func (r *Resource) valueOf(t reflect.Type) (reflect.Value, error) {
+func (r *resource) valueOf(t reflect.Type) (reflect.Value, error) {
 
 	for _, child := range r.Children {
 		v, ok := child.isType(t)
@@ -184,7 +184,7 @@ func (r *Resource) valueOf(t reflect.Type) (reflect.Value, error) {
 }
 
 // Return true if this Resrouce is from by this Type
-func (r *Resource) isType(t reflect.Type) (reflect.Value, bool) {
+func (r *resource) isType(t reflect.Type) (reflect.Value, bool) {
 
 	if t.Kind() == reflect.Interface {
 		if r.Value.Type().Implements(t) {
@@ -215,13 +215,13 @@ func (r *Resource) isType(t reflect.Type) (reflect.Value, bool) {
 }
 
 // Return true if this Resrouce have an Slice type
-func (r *Resource) isSlice() bool {
+func (r *resource) isSlice() bool {
 	return r.SliceValue.IsValid()
 }
 
 // Return true any of its father have the same type of this resrouce
 // this method prevent for Circular Dependency
-func (r *Resource) existParent(resource *Resource) (bool, *Resource) {
+func (r *resource) existParent(resource *resource) (bool, *resource) {
 
 	if r.isEqual(resource) {
 		return true, r
@@ -235,21 +235,21 @@ func (r *Resource) existParent(resource *Resource) (bool, *Resource) {
 }
 
 // Return true if this Resrouce is from by this Type
-func (r *Resource) isEqual(resource *Resource) bool {
+func (r *resource) isEqual(resource *resource) bool {
 	return r.Type() == resource.Type()
 }
 
 // Return true if this Resrouce is from by this Type
-func (r *Resource) Type() reflect.Type {
+func (r *resource) Type() reflect.Type {
 	return r.Value.Type()
 }
 
 // Return true if this Resrouce is from by this Type
-func (r *Resource) SliceType() reflect.Type {
+func (r *resource) SliceType() reflect.Type {
 	return r.SliceValue.Type()
 }
 
-func (r *Resource) String() string {
+func (r *resource) String() string {
 
 	name := "[" + r.Name + "]"
 

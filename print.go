@@ -1,4 +1,4 @@
-package resource
+package api
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func printResource(r *Resource, lvl int) {
+func printResource(r *resource, lvl int) {
 	fmt.Printf("%-16s %-20s %-5v  ",
 		strings.Repeat("|  ", lvl)+"|-["+r.Name+"]",
 		r.Value.Type(), r.isSlice())
@@ -31,29 +31,29 @@ func printResource(r *Resource, lvl int) {
 	}
 }
 
-func printRoute(r *Route, lvl int) {
-	fmt.Printf("%s", strings.Repeat("|	", lvl)+"|-/"+r.URI)
+func printRoute(ro *route, lvl int) {
+	fmt.Printf("%s", strings.Repeat("|	", lvl)+"|-/"+ro.URI)
 
-	if r.IsSlice {
+	if ro.IsSlice {
 		fmt.Printf(" *is slice*")
 	}
 
 	fmt.Println()
 
-	for _, h := range r.SliceHandlers {
+	for _, h := range ro.SliceHandlers {
 		printHandler(h, true, lvl+1)
 	}
 
-	for _, h := range r.Handlers {
+	for _, h := range ro.Handlers {
 		printHandler(h, false, lvl+1)
 	}
 
-	for _, c := range r.Children {
+	for _, c := range ro.Children {
 		printRoute(c, lvl+1)
 	}
 }
 
-func printHandler(h *Handler, isSlice bool, lvl int) {
+func printHandler(h *handler, isSlice bool, lvl int) {
 	fmt.Printf("%s ", strings.Repeat("|	", lvl)+"| -")
 
 	if isSlice {
@@ -68,7 +68,7 @@ func printHandler(h *Handler, isSlice bool, lvl int) {
 
 }
 
-func printDependency(t reflect.Type, d *Dependency, lvl int) {
+func printDependency(t reflect.Type, d *dependency, lvl int) {
 	fmt.Printf("%s %-24s as %-24s", strings.Repeat("|	", lvl)+"-", t, d.Value.Type())
 
 	if d.Method != nil {
@@ -89,16 +89,16 @@ func printDependency(t reflect.Type, d *Dependency, lvl int) {
 // marking some resource within the stack
 // It is used to alert user for circular dependency
 // in the resource relationships
-func printResourceStack(resource, mark *Resource) {
+func printResourceStack(r, mark *resource) {
 
-	if resource.Parent != nil {
-		printResourceStack(resource.Parent, mark)
+	if r.Parent != nil {
+		printResourceStack(r.Parent, mark)
 	}
 
-	if resource.isEqual(mark) {
-		log.Printf("*** -> %s\n", resource.String())
+	if r.isEqual(mark) {
+		log.Printf("*** -> %s\n", r.String())
 	} else {
-		log.Printf("    -> %s\n", resource.String())
+		log.Printf("    -> %s\n", r.String())
 	}
 
 }
