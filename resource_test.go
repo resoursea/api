@@ -8,41 +8,40 @@ import (
 	"testing"
 )
 
+type API struct {
+	A A
+}
+
 //
 // Test
 //
 func TestResource(t *testing.T) {
-	a := A{
-		Name: "Testing",
-		//X:    X{Test: "Tested"},
-		//Bs:   BList{B{Name: "Started"}},
+	api := API{
+		A{
+			Name: "Testing",
+			//X:    X{Test: "Tested"},
+			Bs: BList{B{Name: "Started"}},
+		},
 	}
 
-	resource := NewResource(a, "recurso")
-
-	server := NewServer()
-
-	err := server.Add(resource)
+	resource, err := NewResource(api)
 	if err != nil {
-		log.Println(err)
+		t.Fatal(err)
 	}
 
-	//server.BuildRoutes()
+	route, err := NewRoute(resource)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	fmt.Println("\n1 ----------\n")
+	PrintResource(resource, 0)
 
-	printResource(resource, 0)
-
-	fmt.Println("\n2 ----------\n")
-
-	printRoute(server.Route, 0)
-
-	fmt.Println("\n3 ----------\n")
+	PrintRoute(route, 0)
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/recurso", nil)
+	req, _ := http.NewRequest("GET", "/api/a/bs/login", nil)
 
-	server.ServeHTTP(res, req)
+	route.ServeHTTP(res, req)
 
 	fmt.Printf("RETURN: %v\n", res.Body)
 
@@ -80,6 +79,11 @@ func (b *BList) Init() *BList {
 }
 
 func (b *BList) GET() *BList {
+	return b
+}
+
+func (b BList) GETLogin() BList {
+	b[0].Name = "ACTION"
 	return b
 }
 

@@ -12,7 +12,7 @@ type circularDependency struct {
 	Dependents []reflect.Type
 }
 
-func checkCircularDependency(ro *route) error {
+func checkCircularDependency(ro *Route) error {
 	c := &circularDependency{
 		Dependents: []reflect.Type{},
 	}
@@ -23,11 +23,11 @@ func checkCircularDependency(ro *route) error {
 	return nil
 }
 
-func (c *circularDependency) checkRoute(ro *route) error {
+func (c *circularDependency) checkRoute(ro *Route) error {
 
 	for _, h := range ro.Handlers {
 
-		//log.Println("Check CD for", h.Method.Method)
+		log.Println("Check CD for", h.Method.Method)
 
 		for _, d := range h.Dependencies {
 			// It's necessary cause we will have many depenedencies
@@ -66,24 +66,28 @@ func (c *circularDependency) checkDependency(dependency *dependency, dependencie
 		return err
 	}
 
-	for i, t := range dependency.Method.Inputs {
+	// Method could be nil!
+	// Cause resources desn't have Init
+	if dependency.Method != nil {
+		for i, t := range dependency.Method.Inputs {
 
-		// The first element will always be the dependency itself
-		if i == 0 {
-			continue
-		}
+			// The first element will always be the dependency itself
+			if i == 0 {
+				continue
+			}
 
-		// IDs types desn't need to be declared,
-		// cause it will be present in the context
-		if t == idType {
-			continue
-		}
+			// IDs types desn't need to be checked,
+			// cause it will be present in the context
+			if t == idType {
+				continue
+			}
 
-		d, exist := dependencies.vaueOf(t)
-		if !exist { // It should never occurs!
-			log.Panicf("Danger! No dependency %s found!\n", t)
+			d, exist := dependencies.vaueOf(t)
+			if !exist { // It should never occurs!
+				log.Panicf("Danger! No dependency %s found!\n", t)
+			}
+			c.checkDependency(d, dependencies)
 		}
-		c.checkDependency(d, dependencies)
 	}
 
 	// Remove itself from the list

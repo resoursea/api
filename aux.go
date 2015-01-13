@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"reflect"
-	"strings"
 )
 
 // This constants will be used on the method above
@@ -31,25 +30,16 @@ func isContextType(resourceType reflect.Type) bool {
 	if resourceType.AssignableTo(idPtrType) {
 		log.Fatalf("You asked for %s when you should used %s", idPtrType, idType)
 	}
+
 	return resourceType.AssignableTo(tesponseWriterType) ||
 		resourceType.AssignableTo(requestPtrType) ||
 		resourceType == idType
 }
 
-// Return if this method should be mapped or not
-// Methods starting with GET, POST, PUT, DELETE or HEAD should be mapped
-func isMappedMethod(method reflect.Method) bool {
-	return strings.HasPrefix(method.Name, "GET") ||
-		strings.HasPrefix(method.Name, "POST") ||
-		strings.HasPrefix(method.Name, "PUT") ||
-		strings.HasPrefix(method.Name, "DELETE") ||
-		strings.HasPrefix(method.Name, "HEAD")
-}
-
 // Return the Pointer to Struct Value if passed one of those types
 // Struct, *Struct, []Struct or []*Struct
 // Return one Pointer to Struct value and one Pointer to Slice value, if exists
-func getPtrValues(value reflect.Value) (structPtr reflect.Value, slicePtr reflect.Value, isValid bool) {
+func getPtrValue(value reflect.Value) (reflect.Value, bool) {
 
 	// If its an pointer, extract the element of that pointer
 	value = elemOf(value)
@@ -60,36 +50,50 @@ func getPtrValues(value reflect.Value) (structPtr reflect.Value, slicePtr reflec
 			// we will use an empty value of the slice type
 
 			// Create a new Ptr to Slice value by the Slice Type passed
-			slicePtr = reflect.New(value.Type())
-
-			// Create a new Elem of the Type inside the Slice
-			value = reflect.New(elemOfType(value.Type().Elem())).Elem()
-
+			return reflect.New(value.Type()), true
 		} else {
 			// If the slice has an element inside,
-			// so get the first element to represent the Struct Value of this slice
+			// so set the value passed
 
 			// Create a new Ptr to Slice value by the Slice Type passed
-			slicePtr = reflect.New(value.Type())
+			ptrValue := reflect.New(value.Type())
 			// Add the current Value to this new Ptr to Slice Value
-			slicePtr.Elem().Set(value)
+			ptrValue.Elem().Set(value)
 
-			// Get the value of the first element in the Slice
-			value = elemOf(value.Index(0))
+			return ptrValue, true
 		}
 	}
 
 	if value.Kind() == reflect.Struct {
 		// Create a new Ptr to Struct value by this Struct type
-		structPtr = reflect.New(value.Type())
+		ptrValue := reflect.New(value.Type())
 		// Add the current value to this new Ptr to Struct value
-		structPtr.Elem().Set(value)
+		ptrValue.Elem().Set(value)
 
-		return structPtr, slicePtr, true
+		return ptrValue, true
 	}
 
 	// Return false if the final value is not an Struct
-	return structPtr, slicePtr, false
+	return reflect.Value{}, false
+}
+
+// Return the Value of the Elem of this Slice
+func sliceElem(value reflect.Value) reflect.Value {
+
+	value = elemOf(value)
+	log.Println("*** ", value.Type())
+
+	if value.IsNil() || value.Len() == 0 {
+		// Create a new Elem of the Type inside the Slice
+		log.Println("***1 ", reflect.New(elemOfType(value.Type().Elem())))
+		return reflect.New(elemOfType(value.Type().Elem()))
+	}
+
+	// TODO
+	// Not so good!
+	log.Println("***2 ", value.Index(0).Type())
+	return value.Index(0)
+
 }
 
 // If Value is a Ptr, return the Elem it points to
@@ -137,7 +141,7 @@ func ptrOfType(t reflect.Type) reflect.Type {
 // Return the true if passed one of those types
 // Struct, *Struct, []Struct or []*Struct
 func isValidValue(v reflect.Value) bool {
-	_, _, isValid := getPtrValues(v)
+	_, isValid := getPtrValue(v)
 
 	return isValid
 }
@@ -153,7 +157,7 @@ func isValidDependencyType(t reflect.Type) bool {
 }
 
 // Return true if this Type is a Slice or Ptr to Slice
-func isSlice(t reflect.Type) bool {
+func isSliceType(t reflect.Type) bool {
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}

@@ -7,17 +7,23 @@ import (
 	"strings"
 )
 
-func printResource(r *resource, lvl int) {
+func PrintResource(r *Resource, lvl int) {
+	fmt.Println("\n--- PRINT RESOURCE ---\n")
+	printResource(r, lvl)
+	fmt.Println("\n--- END PRINT ---\n")
+}
+
+func printResource(r *Resource, lvl int) {
 	fmt.Printf("%-16s %-20s %-5v  ",
 		strings.Repeat("|  ", lvl)+"|-["+r.Name+"]",
-		r.Value.Type(), r.isSlice())
+		r.Value.Type(), r.IsSlice)
 
 	if len(r.Tag) > 0 {
 		fmt.Printf("tag: '%s' ", r.Tag)
 	}
 
-	if r.isSlice() {
-		fmt.Printf("slice: %s ", r.SliceValue.Type())
+	if r.IsSlice {
+		fmt.Printf("slice: %s ", r.IsSlice)
 	}
 
 	for _, e := range r.Extends {
@@ -31,7 +37,13 @@ func printResource(r *resource, lvl int) {
 	}
 }
 
-func printRoute(ro *route, lvl int) {
+func PrintRoute(ro *Route, lvl int) {
+	fmt.Println("\n--- PRINT ROUTE ---\n")
+	printRoute(ro, lvl)
+	fmt.Println("\n--- END PRINT ---\n")
+}
+
+func printRoute(ro *Route, lvl int) {
 	fmt.Printf("%s", strings.Repeat("|	", lvl)+"|-/"+ro.URI)
 
 	if ro.IsSlice {
@@ -40,12 +52,8 @@ func printRoute(ro *route, lvl int) {
 
 	fmt.Println()
 
-	for _, h := range ro.SliceHandlers {
-		printHandler(h, true, lvl+1)
-	}
-
 	for _, h := range ro.Handlers {
-		printHandler(h, false, lvl+1)
+		printHandler(h, true, lvl+1)
 	}
 
 	for _, c := range ro.Children {
@@ -60,7 +68,7 @@ func printHandler(h *handler, isSlice bool, lvl int) {
 		fmt.Printf("[] ")
 	}
 
-	fmt.Println(h.Name + "()   Dependencies:")
+	fmt.Println(h.Method.Name + ": " + h.Method.HTTPMethod + "()   Dependencies:")
 
 	for t, d := range h.Dependencies {
 		printDependency(t, d, lvl+1)
@@ -89,7 +97,7 @@ func printDependency(t reflect.Type, d *dependency, lvl int) {
 // marking some resource within the stack
 // It is used to alert user for circular dependency
 // in the resource relationships
-func printResourceStack(r, mark *resource) {
+func printResourceStack(r, mark *Resource) {
 
 	if r.Parent != nil {
 		printResourceStack(r.Parent, mark)

@@ -6,7 +6,6 @@ import (
 )
 
 type handler struct {
-	Name   string
 	Method *method
 	// Many Types could poiny to the same dependencie
 	// It could occour couse could have any number of Interfaces
@@ -14,12 +13,11 @@ type handler struct {
 	Dependencies dependencies
 }
 
-func newHandler(r *resource, m *method) *handler {
+func newHandler(r *Resource, m *method) *handler {
 
-	//log.Println("Creating Handler", method.Name, "for resource", resource.Name)
+	//log.Println("Creating Handler", method.URI, "for resource", resource.URI)
 
 	h := &handler{
-		Name:         m.Name,
 		Method:       m,
 		Dependencies: make(map[reflect.Type]*dependency),
 	}
@@ -36,7 +34,7 @@ func newHandler(r *resource, m *method) *handler {
 // Scan the dependencies recursively and add it to the method
 // This method ensures that all dependencies will be present
 // when the dependent want then
-func (h *handler) scanDependency(dependencyType reflect.Type, r *resource) {
+func (h *handler) scanDependency(dependencyType reflect.Type, r *Resource) {
 
 	log.Println("Scanning dependency", dependencyType)
 
@@ -84,7 +82,7 @@ func (h *handler) scanDependency(dependencyType reflect.Type, r *resource) {
 }
 
 // Scan the dependencies of the Init method of some type
-func scanInit(value reflect.Value, h *handler, r *resource) *method {
+func scanInit(value reflect.Value, h *handler, r *Resource) *method {
 
 	method, exists := value.Type().MethodByName("Init")
 	if !exists {
