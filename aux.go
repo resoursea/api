@@ -1,9 +1,11 @@
 package api
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"reflect"
+	"strings"
 )
 
 // This constants will be used on the method above
@@ -36,69 +38,82 @@ func isContextType(resourceType reflect.Type) bool {
 		resourceType == idType
 }
 
-// Return the Pointer to Struct Value if passed one of those types
+// Return the Ptr to the given Value if passed one of those types
 // Struct, *Struct, []Struct or []*Struct
-// Return one Pointer to Struct value and one Pointer to Slice value, if exists
-func getPtrValue(value reflect.Value) (reflect.Value, bool) {
+func validPtrOfValue(value reflect.Value) (reflect.Value, error) {
 
 	// If its an pointer, extract the element of that pointer
-	value = elemOf(value)
+	value = elemOfValue(value)
+
+	// Create a new Ptr to the given Value Type
+	ptrValue := reflect.New(value.Type())
 
 	if value.Kind() == reflect.Slice {
+
+		// TODO
+		// Here we should test if this is an Slice by the Struct type
+
 		if value.IsNil() || value.Len() == 0 {
-			// If it is nil or have no initial value
-			// we will use an empty value of the slice type
-
-			// Create a new Ptr to Slice value by the Slice Type passed
-			return reflect.New(value.Type()), true
+			// If it is nil or it has nothing insid
+			// return the empty Ptr to this Value type
+			return ptrValue, nil
 		} else {
-			// If the slice has an element inside,
-			// so set the value passed
+			// If the slice is initialized and has elements inside it,
+			// so insert these values in it
 
-			// Create a new Ptr to Slice value by the Slice Type passed
-			ptrValue := reflect.New(value.Type())
-			// Add the current Value to this new Ptr to Slice Value
+			// Add the given Slice Values to this new Ptr to Slice Value
 			ptrValue.Elem().Set(value)
 
-			return ptrValue, true
+			return ptrValue, nil
 		}
 	}
 
 	if value.Kind() == reflect.Struct {
-		// Create a new Ptr to Struct value by this Struct type
-		ptrValue := reflect.New(value.Type())
-		// Add the current value to this new Ptr to Struct value
+		// Add the given Struct Value to this new Ptr to this Struct type
 		ptrValue.Elem().Set(value)
 
-		return ptrValue, true
+		return ptrValue, nil
 	}
 
-	// Return false if the final value is not an Struct
-	return reflect.Value{}, false
+	// Return error if the final value is not one of the valid types
+	return reflect.Value{}, errors.New("You should pass an struct or an slice of structs")
 }
 
-// Return the Value of the Elem of this Slice
-func sliceElem(value reflect.Value) reflect.Value {
+// Return the Value of the Elem of the given Slice
+func slicePtrToElemValue(value reflect.Value) reflect.Value {
 
-	value = elemOf(value)
-	log.Println("*** ", value.Type())
+	value = elemOfValue(value)
+
+	// Creates a new Ptr to Elem of the Type this Slice stores
+	ptrToElemValue := reflect.New(elemOfType(value.Type().Elem()))
 
 	if value.IsNil() || value.Len() == 0 {
-		// Create a new Elem of the Type inside the Slice
-		log.Println("***1 ", reflect.New(elemOfType(value.Type().Elem())))
-		return reflect.New(elemOfType(value.Type().Elem()))
+		// If given Slice is null or it has nothing inside it
+		// return the new empty Value of the Elem inside this slice
+		return ptrToElemValue
 	}
 
-	// TODO
-	// Not so good!
-	log.Println("***2 ", value.Index(0).Type())
-	return value.Index(0)
+	// If this slice has an Elem inside it
+	// and set the value of the first Elem inside this Slice
+
+	ptrToElemValue.Elem().Set(value.Index(0))
+
+	// Not tested yet, lets test it...
+	log.Println("TODO slicePtrToElemValue TEST ", ptrToElemValue.Interface())
+
+	return ptrToElemValue
 
 }
 
 // If Value is a Ptr, return the Elem it points to
-func elemOf(value reflect.Value) reflect.Value {
+func elemOfValue(value reflect.Value) reflect.Value {
+
 	if value.Kind() == reflect.Ptr {
+		// It occours if an Struct has an Field that points itself
+		// so it should never occours, and will be cauch by the check for Circular Dependency
+		if !value.Elem().IsValid() {
+			value = reflect.New(elemOfType(value.Type()))
+		}
 		return value.Elem()
 	}
 	return value
@@ -141,9 +156,12 @@ func ptrOfType(t reflect.Type) reflect.Type {
 // Return the true if passed one of those types
 // Struct, *Struct, []Struct or []*Struct
 func isValidValue(v reflect.Value) bool {
-	_, isValid := getPtrValue(v)
+	_, err := validPtrOfValue(v)
+	if err != nil {
+		return false
+	}
 
-	return isValid
+	return true
 }
 
 // Return the true if the dependency is one of those types
@@ -181,4 +199,11 @@ func isValidInit(method reflect.Method) bool {
 	}
 
 	return false
+}
+
+// Return true if given StructField is an exported Field
+// return false if is an unexported Field
+func isExportedField(field reflect.StructField) bool {
+	firstChar := string([]rune(field.Name)[0])
+	return firstChar == strings.ToUpper(firstChar)
 }

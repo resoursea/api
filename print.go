@@ -7,39 +7,42 @@ import (
 	"strings"
 )
 
-func PrintResource(r *Resource, lvl int) {
+func PrintResource(r *Resource) {
 	fmt.Println("\n--- PRINT RESOURCE ---\n")
-	printResource(r, lvl)
+	printResource(r, 0)
 	fmt.Println("\n--- END PRINT ---\n")
 }
 
 func printResource(r *Resource, lvl int) {
-	fmt.Printf("%-16s %-20s %-5v  ",
-		strings.Repeat("|  ", lvl)+"|-["+r.Name+"]",
-		r.Value.Type(), r.IsSlice)
+	fmt.Printf("%-20s %-18s ", strings.Repeat("|  ", lvl)+"|-["+r.Name+"]", r.Value.Type())
 
 	if len(r.Tag) > 0 {
 		fmt.Printf("tag: '%s' ", r.Tag)
 	}
 
-	if r.IsSlice {
-		fmt.Printf("slice: %s ", r.IsSlice)
+	if len(r.Extends) > 0 {
+		fmt.Printf("extends: ")
+		for _, e := range r.Extends {
+			fmt.Printf("%s ", e.Value.Type())
+		}
 	}
 
-	for _, e := range r.Extends {
-		fmt.Printf("extends: %s ", e.Value.Type())
-	}
+	fmt.Printf("%#v", r.Value.Interface())
 
 	fmt.Println()
+
+	if r.IsSlice {
+		printResource(r.Elem, lvl)
+	}
 
 	for _, c := range r.Children {
 		printResource(c, lvl+1)
 	}
 }
 
-func PrintRoute(ro *Route, lvl int) {
+func PrintRoute(ro *Route) {
 	fmt.Println("\n--- PRINT ROUTE ---\n")
-	printRoute(ro, lvl)
+	printRoute(ro, 0)
 	fmt.Println("\n--- END PRINT ---\n")
 }
 
@@ -103,7 +106,7 @@ func printResourceStack(r, mark *Resource) {
 		printResourceStack(r.Parent, mark)
 	}
 
-	if r.isEqual(mark) {
+	if r.isSameType(mark) {
 		log.Printf("*** -> %s\n", r.String())
 	} else {
 		log.Printf("    -> %s\n", r.String())

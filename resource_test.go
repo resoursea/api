@@ -3,8 +3,8 @@ package api
 import (
 	"fmt"
 	"log"
-	"net/http"
-	"net/http/httptest"
+	//"net/http"
+	//"net/http/httptest"
 	"testing"
 )
 
@@ -20,7 +20,8 @@ func TestResource(t *testing.T) {
 		A{
 			Name: "Testing",
 			//X:    X{Test: "Tested"},
-			Bs: BList{B{Name: "Started"}},
+			//Bs: BList{B{Name: "Started"}},
+			//B: &B{Name: "Setted"},
 		},
 	}
 
@@ -29,23 +30,27 @@ func TestResource(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	route, err := NewRoute(resource)
-	if err != nil {
-		t.Fatal(err)
-	}
+	PrintResource(resource)
 
-	PrintResource(resource, 0)
+	/*
 
-	PrintRoute(route, 0)
+		route, err := NewRoute(resource)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/a/bs/login", nil)
+		PrintRoute(route)
 
-	route.ServeHTTP(res, req)
+		res := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/a/bs/login", nil)
 
-	fmt.Printf("RETURN: %v\n", res.Body)
+		route.ServeHTTP(res, req)
 
-	fmt.Println("\nEND --------\n")
+		fmt.Printf("RETURN: %v\n", res.Body)
+
+	*/
+
+	fmt.Println("\n-------- TEST END --------\n")
 
 }
 
@@ -56,7 +61,7 @@ func TestResource(t *testing.T) {
 type A struct {
 	Id   string
 	Name string
-	Bs   BList "Tag de Bs"
+	Bs   *BList "Tag de Bs"
 	//X
 	//C C // conflit, name 'c' already used
 }
