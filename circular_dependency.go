@@ -3,7 +3,6 @@ package api
 import (
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 )
 
@@ -12,6 +11,7 @@ type circularDependency struct {
 	Dependents []reflect.Type
 }
 
+// Check the existence of Circular Dependency on the route
 func checkCircularDependency(ro *Route) error {
 	c := &circularDependency{
 		Dependents: []reflect.Type{},
@@ -27,16 +27,14 @@ func (c *circularDependency) checkRoute(ro *Route) error {
 
 	for _, h := range ro.Handlers {
 
-		log.Println("Check CD for", h.Method.Method)
+		//log.Println("Check CD for Method", h.Method)
 
 		for _, d := range h.Dependencies {
 			// It's necessary cause we will have many depenedencies
 			// indexed by differente types
 			if c.notChecked(d) {
 
-				//log.Println("###Checking : ", d.Value.Type())
-
-				err := c.checkDependency(d, h.Dependencies)
+				err := c.checkDependency(d, h)
 				if err != nil {
 					return err
 				}
@@ -57,22 +55,28 @@ func (c *circularDependency) checkRoute(ro *Route) error {
 	return nil
 }
 
-func (c *circularDependency) checkDependency(dependency *dependency, dependencies dependencies) error {
+// This method add de Dependency to the Dependents list testing if it conflicts
+// and moves recursively on each Dependency of this Dependency...
+// at the end of the method the Dependency is removed from the Dependents list
+func (c *circularDependency) checkDependency(dependency *dependency, h *handler) error {
+
+	//log.Println("CD for Dependency", dependency.Value.Type())
 
 	// Add this dependency type to the dependency list
-	err := c.add(dependency.Value.Type())
+	// and check if this type desn't already exist
+	err := c.addAndCheck(dependency.Value.Type())
 	if err != nil {
-		log.Fatalln(err)
 		return err
 	}
 
-	// Method could be nil!
-	// Cause resources desn't have Init
+	// Check if this Dependency has Init Method
 	if dependency.Method != nil {
-		for i, t := range dependency.Method.Inputs {
+		for _, t := range dependency.Method.Inputs {
+
+			//log.Println("CD for Dependency Init Dependency", i, t, dependency.isType(t))
 
 			// The first element will always be the dependency itself
-			if i == 0 {
+			if dependency.isType(t) {
 				continue
 			}
 
@@ -82,11 +86,16 @@ func (c *circularDependency) checkDependency(dependency *dependency, dependencie
 				continue
 			}
 
-			d, exist := dependencies.vaueOf(t)
+			d, exist := h.Dependencies.vaueOf(t)
 			if !exist { // It should never occurs!
-				log.Panicf("Danger! No dependency %s found!\n", t)
+				return fmt.Errorf("Danger! No dependency %s found! Something very wrong happened!", t)
 			}
-			c.checkDependency(d, dependencies)
+
+			// Go ahead recursively on each Dependency
+			err := c.checkDependency(d, h)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -98,25 +107,25 @@ func (c *circularDependency) checkDependency(dependency *dependency, dependencie
 
 // Checks whether the Dependents doesn't fall into a circular dependency
 // Add a new type to the Dependents list
-func (c *circularDependency) add(t reflect.Type) error {
+func (c *circularDependency) addAndCheck(t reflect.Type) error {
 
 	// Check for circular dependency
 	ok := true
-	text := ""
+	errMsg := ""
 
 	for _, t2 := range c.Dependents {
 		if !ok {
-			text += fmt.Sprintf("%s that depends on ", t2)
+			errMsg += fmt.Sprintf("%s that depends on ", t2)
 		}
 		if t == t2 {
 			ok = false
-			text += fmt.Sprintf("%s depends on ", t2)
+			errMsg += fmt.Sprintf("%s depends on ", t2)
 		}
 	}
 
 	if !ok {
-		text += fmt.Sprintf("%s\n", t)
-		return errors.New(text)
+		errMsg += fmt.Sprintf("%s\n", t)
+		return errors.New(errMsg)
 	}
 
 	//log.Println("Adding:", t)

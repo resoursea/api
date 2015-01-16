@@ -42,36 +42,38 @@ func printResource(r *Resource, lvl int) {
 
 func PrintRoute(ro *Route) {
 	fmt.Println("\n--- PRINT ROUTE ---\n")
-	printRoute(ro, 0)
+	printRoute(ro, 0, false)
 	fmt.Println("\n--- END PRINT ---\n")
 }
 
-func printRoute(ro *Route, lvl int) {
-	fmt.Printf("%s", strings.Repeat("|	", lvl)+"|-/"+ro.URI)
+// Pass Elem when printing a Elem inside an Slice
+func printRoute(ro *Route, lvl int, elem bool) {
 
-	if ro.IsSlice {
-		fmt.Printf(" *is slice*")
+	// This add the last bar for the addres of Elements of Slices
+	bar := ""
+	if elem {
+		bar = "/"
 	}
 
-	fmt.Println()
+	fmt.Printf("%s /%s%s   %s\n", strings.Repeat("|	", lvl)+"| -", ro.Name, bar, ro.Value.Type())
 
 	for _, h := range ro.Handlers {
-		printHandler(h, true, lvl+1)
+		printHandler(h, lvl+1)
+	}
+
+	if ro.IsSlice {
+		printRoute(ro.Elem, lvl, true)
 	}
 
 	for _, c := range ro.Children {
-		printRoute(c, lvl+1)
+		printRoute(c, lvl+1, false)
 	}
 }
 
-func printHandler(h *handler, isSlice bool, lvl int) {
+func printHandler(h *handler, lvl int) {
 	fmt.Printf("%s ", strings.Repeat("|	", lvl)+"| -")
 
-	if isSlice {
-		fmt.Printf("[] ")
-	}
-
-	fmt.Println(h.Method.Name + ": " + h.Method.HTTPMethod + "()   Dependencies:")
+	fmt.Printf("[%s] /%s     Dependencies:\n", h.Method.HTTPMethod, h.Method.Name)
 
 	for t, d := range h.Dependencies {
 		printDependency(t, d, lvl+1)
@@ -80,7 +82,7 @@ func printHandler(h *handler, isSlice bool, lvl int) {
 }
 
 func printDependency(t reflect.Type, d *dependency, lvl int) {
-	fmt.Printf("%s %-24s as %-24s", strings.Repeat("|	", lvl)+"-", t, d.Value.Type())
+	fmt.Printf("%s %-24s as %-24s", strings.Repeat("|	", lvl)+"- - -", t, d.Value.Type())
 
 	if d.Method != nil {
 		fmt.Printf(" Init Input:")
@@ -106,7 +108,7 @@ func printResourceStack(r, mark *Resource) {
 		printResourceStack(r.Parent, mark)
 	}
 
-	if r.isSameType(mark) {
+	if r.Value.Type() == mark.Value.Type() {
 		log.Printf("*** -> %s\n", r.String())
 	} else {
 		log.Printf("    -> %s\n", r.String())

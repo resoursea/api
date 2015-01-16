@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"reflect"
@@ -153,9 +154,15 @@ func ptrOfType(t reflect.Type) reflect.Type {
 	return t
 }
 
-// Return the true if passed one of those types
+// Check if this field is exported: fieldValue.CanSet()
+// and if this field is valid fo create Resources: Structs or Slices of Structs
+// Return the true if is an exported field of those of types
 // Struct, *Struct, []Struct or []*Struct
 func isValidValue(v reflect.Value) bool {
+	if !v.CanSet() {
+		return false
+	}
+
 	_, err := validPtrOfValue(v)
 	if err != nil {
 		return false
@@ -166,12 +173,15 @@ func isValidValue(v reflect.Value) bool {
 
 // Return the true if the dependency is one of those types
 // Interface, Struct, *Struct, []Struct or []*Struct
-func isValidDependencyType(t reflect.Type) bool {
+func isValidDependencyType(t reflect.Type) error {
 	t = elemOfType(t)
 
-	return t.Kind() == reflect.Interface ||
-		t.Kind() == reflect.Struct ||
-		t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Struct
+	if t.Kind() == reflect.Interface || t.Kind() == reflect.Struct ||
+		t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Struct {
+		return nil
+	}
+
+	return fmt.Errorf("Type %s is not allowed as dependency", t)
 }
 
 // Return true if this Type is a Slice or Ptr to Slice
@@ -185,20 +195,20 @@ func isSliceType(t reflect.Type) bool {
 // Init methods should have no Output,
 // it should alter the first argument as a pointer
 // Or, at least, return itself
-func isValidInit(method reflect.Method) bool {
+func isValidInit(method reflect.Method) error {
 	// If it has no output it's accepted
 	if method.Type.NumOut() == 0 {
-		return true
+		return nil
 	}
 
 	// It could return just one resource, itself
-	if method.Type.NumOut() == 1 {
-		//log.Printf("### TESTING: %s \n", method.Type)
-		//log.Printf("### TESTING: %s, %s \n", method.Type.In(0), method.Type.Out(0))
-		return method.Type.In(0) == method.Type.Out(0)
+	if method.Type.NumOut() == 1 && method.Type.In(0) == method.Type.Out(0) {
+		return nil
 	}
 
-	return false
+	return fmt.Errorf("Resource %s has an invalid Init method %s \n"+
+		"It should have no return, or just return an Pointer to the Resource itself %s",
+		method.Type.In(0), method.Type, method.Type.In(0))
 }
 
 // Return true if given StructField is an exported Field
@@ -206,4 +216,20 @@ func isValidInit(method reflect.Method) bool {
 func isExportedField(field reflect.StructField) bool {
 	firstChar := string([]rune(field.Name)[0])
 	return firstChar == strings.ToUpper(firstChar)
+}
+
+// Return a new empty Value for one of these Types
+// Struct, Ptr to Struct, Slice, Ptr to Slice
+func newEmptyValue(t reflect.Type) (reflect.Value, error) {
+
+	// For Struct or Slice
+	if t.Kind() == reflect.Struct || t.Kind() == reflect.Slice {
+		return reflect.New(t), nil // A new Ptr to Struct of this type
+	}
+	// For Ptr to Struct or Ptr to Slice
+	if t.Kind() == reflect.Ptr && (t.Elem().Kind() == reflect.Struct || t.Elem().Kind() == reflect.Slice) {
+		return reflect.New(t.Elem()), nil // A new Ptr to Struct of this type
+	}
+
+	return reflect.Value{}, fmt.Errorf("Can't create an empty Value for type  %s", t)
 }

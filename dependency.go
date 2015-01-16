@@ -16,7 +16,7 @@ type dependency struct {
 type dependencies map[reflect.Type]*dependency
 
 // This method checks if exist an value for the received type
-// If it already exist, but in indexed by another type
+// If it already exist, but its indexed by another type
 // it will index for the new type too
 func (ds dependencies) vaueOf(t reflect.Type) (*dependency, bool) {
 
@@ -52,9 +52,7 @@ func (d *dependency) isType(t reflect.Type) bool {
 		return d.Value.Type().Implements(t)
 	}
 
-	// The value stored in Dependency
-	// is the type Ptr to Struct, or Ptr to Slice of Struct
-	t = ptrOfType(t)
-
-	return d.Value.Type() == t
+	// The Value stored in Dependency
+	// is from Type Ptr to Struct, or Ptr to Slice of Struct
+	return d.Value.Type() == ptrOfType(t)
 }

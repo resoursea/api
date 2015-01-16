@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"reflect"
@@ -11,7 +12,7 @@ import (
 
 type Route struct {
 	// The resource name
-	URI string
+	Name string
 
 	// The main type of this Route
 	Value reflect.Value
@@ -25,7 +26,7 @@ type Route struct {
 	// Like: GETLogin our POST (for main methodos)
 	Handlers map[string]*handler
 
-	// map[URI]*Route
+	// map[Name]*Route
 	Children map[string]*Route
 
 	// True if the resource is an Slice of Resources
@@ -36,11 +37,13 @@ type Route struct {
 // creating the Route tree
 func NewRoute(r *Resource) (*Route, error) {
 
-	log.Printf("*Building Routes for %v\n", r)
-	log.Println("Building Routes for", r.Value.Type())
+	log.Printf("Building Routes for %s\n", r)
+
+	// TODO
+	// Go throug the Elem of Slice Resources!
 
 	ro := &Route{
-		URI:      r.Name,
+		Name:     r.Name,
 		Value:    r.Value,
 		Elem:     nil,
 		Handlers: make(map[string]*handler),
@@ -48,15 +51,19 @@ func NewRoute(r *Resource) (*Route, error) {
 		IsSlice:  r.IsSlice,
 	}
 
-	// This Route take the methods of the main resource...
-	ro.scanResource(r)
+	// This Route take the methods of the main resource
+	// and all the resource it Exstends will be mapped too
+	err := ro.scanRoutesFor(r)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check for Circular Dependency
 	// on the Dependencies of each method
-	//err := checkCircularDependency(ro)
-	//if err != nil {
-	//	return nil, err
-	//}
+	err = checkCircularDependency(ro)
+	if err != nil {
+		return nil, err
+	}
 
 	// If this Route is for an Slice
 	// Map the Route for this Elem
@@ -76,6 +83,8 @@ func NewRoute(r *Resource) (*Route, error) {
 			return nil, err
 		}
 
+		//log.Printf("Adding child %s to parent %s\n", c, r)
+
 		err = ro.AddChild(c)
 		if err != nil {
 			return nil, err
@@ -90,51 +99,63 @@ func NewRoute(r *Resource) (*Route, error) {
 // We need to scan the methods of the Ptr to the Struct,
 // cause some methods could be attached to the pointer,
 // like func (r *Resource) GET() {}
-func (ro *Route) scanResource(r *Resource) {
+func (ro *Route) scanRoutesFor(r *Resource) error {
 
-	ro.scanType(r)
-
-	// ... and all the resource it Exstends will be mapped too
-	for _, extend := range r.Extends {
-		ro.scanResource(extend)
+	err := ro.scanMethods(r)
+	if err != nil {
+		return err
 	}
 
+	// All the resource it Exstends will be mapped too
+	for _, extend := range r.Extends {
+		err := ro.scanRoutesFor(extend)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Scan the methods from one Type and add it to the Route
 // This type could be []*Resource or just *Resource
-func (ro *Route) scanType(r *Resource) {
+func (ro *Route) scanMethods(r *Resource) error {
 
 	t := r.Value.Type()
 
 	log.Println("Scanning methods from type", t, "is slice:", isSliceType(t))
 
 	for i := 0; i < t.NumMethod(); i++ {
+
 		m := t.Method(i)
 
-		log.Println("Testing:", m.Name)
+		//log.Println("Testing:", m.Name, isMappedMethod(m))
 
-		// We will accept all methods with
+		// We will accept all methods that
 		// has GET, POST, PUT, DELETE, HEAD
-		// at the end of the method
+		// in the prefix of the method name
 		if isMappedMethod(m) {
 
-			log.Println("Passed")
+			h, err := newHandler(m, r)
+			if err != nil {
+				return err
+			}
 
-			method := newMethod(m)
+			//log.Printf("Adding Handler %s for route %s\n", h, ro)
 
-			// Check if this resource have any child to conflict
-			// with this method
-			//if methodConflict(r, method) {
-			//	log.Fatal("Your method conflicts")
-			//}
+			// Check if this new Handler will conflict with some address of Handler that already exist
+			// Action Handlers Names could conflict with Children Names...
+			err = ro.addressConflict(h)
+			if err != nil {
+				return err
+			}
 
-			h := newHandler(r, method)
-
-			// Index: GETLogin or POST...
+			// Index: GETLogin or POST, or POSTMessage...
 			ro.Handlers[h.Method.HTTPMethod+h.Method.Name] = h
 		}
 	}
+
+	return nil
 }
 
 // Return false if this Route have no methods declared
@@ -159,21 +180,54 @@ func (ro *Route) hasHandler() bool {
 
 // Add a new Route child
 func (ro *Route) AddChild(child *Route) error {
+	//log.Printf("AddChild %s %v\n", child, child.hasHandler())
+
 	// Add this Route to the tree only if it has Elemhandlers
 	if child.hasHandler() {
 
-		// Test if this URI wasn't in use yet
-		_, exist := ro.Children[child.URI]
+		// Test if this Name wasn't in use yet by one child
+		_, exist := ro.Children[child.Name]
 		if exist {
-			return errors.New("Route " + ro.URI + " already has child " + child.URI)
+			return errors.New("Route " + ro.Name + " already has child " + child.Name)
 		}
 
-		ro.Children[child.URI] = child
+		// Test if this Name isn't used by one Handler
+		// Remember for Action Handlers
+		for _, h := range ro.Handlers {
+			//log.Printf("TESTING %s WITH %s\n", child, h)
+			if child.Name == h.Method.Name {
+				return fmt.Errorf("%s children of %s conflicts with %s", child, ro, h)
+			}
+		}
+
+		ro.Children[child.Name] = child
 	}
 	return nil
 }
 
-// Return the Route from the especified URI
+// Check if this new Handler will conflict with some Handler already created
+// Action Handlers Names could conflict with Children Names...
+func (ro *Route) addressConflict(h *handler) error {
+
+	for name, child := range ro.Children {
+		if name == h.Method.Name {
+			return fmt.Errorf("%s children of %s conflicts with %s", child, ro, h)
+		}
+	}
+
+	_, exist := ro.Handlers[h.Method.HTTPMethod+h.Method.Name]
+	if exist {
+		return fmt.Errorf("%s already has handler %s", ro, h)
+	}
+
+	return nil
+}
+
+func (ro *Route) String() string {
+	return fmt.Sprintf("Route: [%s] %s", ro.Name, ro.Value.Type())
+}
+
+// Return the Route from the especified Name
 func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, error) {
 
 	log.Println("Route Handling", uri, " in the ", ro.Value.Type())
@@ -183,7 +237,7 @@ func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, 
 	if len(uri) == 0 {
 		h, exist := ro.Handlers[httpMethod]
 		if !exist {
-			return nil, errors.New("No Method " + httpMethod + " in the " + ro.URI)
+			return nil, errors.New("No Method " + httpMethod + " in the " + ro.Name)
 		}
 		return h, nil
 	}
@@ -211,7 +265,7 @@ func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, 
 		return child.handler(uri[1:], httpMethod, ids)
 	}
 
-	return nil, errors.New("Route " + ro.URI + " doesn't any Child or Action " + uri[0])
+	return nil, errors.New("Route " + ro.Name + " doesn't any Child or Action " + uri[0])
 }
 
 // To implement http.Handler
@@ -225,8 +279,8 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//log.Printf("URI: %v\n", uri)
 
 	// Check if this main Route matches with the requested URI
-	if ro.URI != uri[0] {
-		http.Error(w, "Route "+ro.URI+" not match with "+uri[0], http.StatusNotFound)
+	if ro.Name != uri[0] {
+		http.Error(w, "Route "+ro.Name+" not match with "+uri[0], http.StatusNotFound)
 		return
 	}
 

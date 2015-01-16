@@ -1,7 +1,7 @@
 package api
 
 import (
-	"errors"
+	"fmt"
 	"log"
 	"reflect"
 	"strings"
@@ -31,27 +31,25 @@ var httpMethods = [...]string{
 
 func newMethod(m reflect.Method) *method {
 
-	//log.Println("Creating method", method)
-
 	// Extract the method Action and HTTP Method
-	// Ex: LoginGET
+	// Ex: GETLogin
 	// Name: login, HTTP Method: GET
 	// Ex: POST
-	// Name: empty, HTTP Method: POST
-	name, httpMethod, _ := decodeMethodName(m)
-
-	log.Println("New Method:", m.Name, name, httpMethod)
+	// Name: 'empty', HTTP Method: POST
+	httpMethod, name := decodeMethodName(m)
 
 	met := &method{
 		Name:       name,
 		HTTPMethod: httpMethod,
 		Method:     m,
-		Owner:      m.Type.In(0), // The first parameter will always be the Struct itself
+		Owner:      m.Type.In(0), // It is the Struct Type that has the method
 		NumIn:      m.Type.NumIn(),
 		Inputs:     make([]reflect.Type, m.Type.NumIn()),
 		NumOut:     m.Type.NumOut(),
 		OutName:    make([]string, m.Type.NumOut()),
 	}
+
+	log.Println("New Method:", met)
 
 	// Store the input Types in a slice
 	for i := 0; i < met.NumIn; i++ {
@@ -77,25 +75,31 @@ func newMethod(m reflect.Method) *method {
 // GET, PUT, POST, DELETE, HEAD of the resources
 // Action methods respond for some action of the resource,
 // ex: LoginGET, respond to: [GET] resource/login
-func decodeMethodName(m reflect.Method) (string, string, error) {
+func decodeMethodName(m reflect.Method) (httpMethod string, name string) {
+
 	for _, httpMethod := range httpMethods {
 		if strings.HasPrefix(m.Name, httpMethod) {
-			action := strings.TrimSuffix(m.Name, httpMethod)
-			return action, httpMethod, nil
+			name = strings.TrimPrefix(m.Name, httpMethod)
+			return httpMethod, strings.ToLower(name)
 		}
 	}
 
-	return "", "", errors.New("This is not mapeed!")
+	return "", ""
 }
 
 // Return if this method should be mapped or not
 // Methods starting with GET, POST, PUT, DELETE or HEAD should be mapped
-func isMappedMethod(method reflect.Method) bool {
+func isMappedMethod(m reflect.Method) bool {
 
-	_, _, err := decodeMethodName(method)
-	if err != nil {
-		return false
+	for _, httpMethod := range httpMethods {
+		if strings.HasPrefix(m.Name, httpMethod) {
+			return true
+		}
 	}
 
-	return true
+	return false
+}
+
+func (m *method) String() string {
+	return fmt.Sprintf("[%s%s] %s", m.HTTPMethod, m.Name, m.Method.Type)
 }

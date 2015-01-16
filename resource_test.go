@@ -32,15 +32,14 @@ func TestResource(t *testing.T) {
 
 	PrintResource(resource)
 
+	route, err := NewRoute(resource)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	PrintRoute(route)
+
 	/*
-
-		route, err := NewRoute(resource)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		PrintRoute(route)
-
 		res := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/a/bs/login", nil)
 
@@ -66,9 +65,10 @@ type A struct {
 	//C C // conflit, name 'c' already used
 }
 
-func (a A) Init(b BList) {
+func (a A) Init(s A, b BList) *A {
 	log.Println("Init A received", b)
 	b[0].Name = "Changed"
+	return &a
 }
 
 func (a *A) GET(x A, b *BList) *A {
@@ -76,9 +76,14 @@ func (a *A) GET(x A, b *BList) *A {
 	return a
 }
 
+func (a *A) PUTBsx() *A {
+	log.Println("Conflict Handler")
+	return a
+}
+
 type BList []B
 
-func (b *BList) Init() *BList {
+func (bs *BList) Init() *BList {
 	//log.Println("*** BList Received", d)
 	return &BList{B{Name: "FUCKED"}}
 }
@@ -117,7 +122,7 @@ type C struct {
 	Nothing string
 }
 
-func (c *C) Init(id ID, b B) {
+func (c *C) Init(id ID, b B, a A) {
 	log.Println("*** C Received ID:", id)
 	c.Id, _ = id.Int()
 	c.BId = b.Id

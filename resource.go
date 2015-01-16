@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -60,7 +59,7 @@ func newResource(value reflect.Value, field reflect.StructField, parent *Resourc
 		return nil, err
 	}
 
-	log.Println("Scanning Struct:", value.Type(), "name:", strings.ToLower(field.Name))
+	//log.Println("Scanning Struct:", value.Type(), "name:", strings.ToLower(field.Name))
 
 	resource := &Resource{
 		Name:      strings.ToLower(field.Name),
@@ -80,8 +79,8 @@ func newResource(value reflect.Value, field reflect.StructField, parent *Resourc
 		exist, p := parent.existParentOfType(resource)
 		if exist {
 			printResourceStack(resource, resource)
-			return nil, errors.New(fmt.Sprintf("The resource %s as '%s' have an circular dependency in %s as '%s'",
-				resource.Value.Type(), resource.Name, p.Value.Type(), p.Name))
+			return nil, fmt.Errorf("The resource %s as '%s' have an circular dependency in %s as '%s'",
+				resource.Value.Type(), resource.Name, p.Value.Type(), p.Name)
 		}
 
 	}
@@ -106,9 +105,11 @@ func newResource(value reflect.Value, field reflect.StructField, parent *Resourc
 		field := value.Elem().Type().Field(i)
 		fieldValue := value.Elem().Field(i)
 
-		log.Println("Field:", field.Name, field.Type, "of", value.Elem().Type())
+		//log.Println("Field:", field.Name, field.Type, "of", value.Elem().Type())
 
-		if isExportedField(field) && isValidValue(fieldValue) {
+		// Check if this field is exported: fieldValue.CanSet()
+		// and if this field is valid fo create Resources: Structs or Slices of Structs
+		if isValidValue(fieldValue) {
 			child, err := newResource(fieldValue, field, resource)
 			if err != nil {
 				return nil, err
@@ -150,9 +151,11 @@ func (parent *Resource) addChild(child *Resource) {
 	parent.Children = append(parent.Children, child)
 }
 
-// Return Value of the implementation of some Interface
-// This Resource that satisfies this interface
+// Return Value of the implementation of some Interface,
+// this Resource that satisfies this interface
 // should be present in this Resource or in its parents recursively
+// If requested type is an Struct return the initial Value of this Type, if exists,
+// if Struct type not contained on the resource tree, create a new empty Value for this Type
 func (r *Resource) valueOf(t reflect.Type) (reflect.Value, error) {
 
 	for _, child := range r.Children {
@@ -162,43 +165,38 @@ func (r *Resource) valueOf(t reflect.Type) (reflect.Value, error) {
 		}
 	}
 
+	// For Types contained in a Slice
+	if r.IsSlice {
+		ok := r.Elem.isType(t)
+		if ok {
+			return r.Elem.Value, nil
+		}
+	}
+
 	// Go recursively until reaching the root
 	if r.Parent != nil {
 		return r.Parent.valueOf(t)
 	}
 
-	// The special case that to get the root value
-	if r.Parent == nil {
-		ok := r.isType(t)
-		if ok {
-			return r.Value, nil
-		}
+	// Testing the root of the Resource Tree
+	ok := r.isType(t)
+	if ok {
+		return r.Value, nil
+	}
+
+	// At this point we tested all Resources in the tree
+	// If we are searching for an Interface, and noone implements it
+	// so we shall throws an error informing user to satisfy this Interface in the Resource Tree
+	if t.Kind() == reflect.Interface {
+		return reflect.Value{}, fmt.Errorf(
+			"Not found any Resource that implements the Interface "+
+				"type  %s in the Resource tree %s", t, r)
 	}
 
 	// If it isn't present in the Resource tree
 	// and this type we are searching isn't an interface
 	// So we will use an empty new value for it!
-
-	// For Struct
-	if t.Kind() == reflect.Struct {
-		return reflect.New(t), nil // A new Ptr to Struct of this type
-	}
-	// For Ptr to Struct
-	if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Struct {
-		return reflect.New(t.Elem()), nil // A new Ptr to Struct of this type
-	}
-	// For Slice
-	if t.Kind() == reflect.Slice {
-		return reflect.New(t), nil
-	}
-	// For Ptr to Slice
-	if t.Kind() == reflect.Ptr && t.Elem().Kind() == reflect.Slice {
-		return reflect.New(t.Elem()), nil
-	}
-
-	return reflect.Value{}, fmt.Errorf(
-		"Not found any Resource that implements the type  %s in the tree %s",
-		t, r.Value.Type())
+	return newEmptyValue(t)
 }
 
 // Return true if this Resrouce is from by this Type
@@ -225,7 +223,7 @@ func (r *Resource) isType(t reflect.Type) bool {
 // This method prevents for Circular Dependency
 func (r *Resource) existParentOfType(resource *Resource) (bool, *Resource) {
 
-	if r.isSameType(resource) {
+	if r.Value.Type() == resource.Value.Type() {
 		return true, r
 	}
 
@@ -236,16 +234,11 @@ func (r *Resource) existParentOfType(resource *Resource) (bool, *Resource) {
 	return false, nil
 }
 
-// Return true if this Resrouce is from by this Type
-func (r *Resource) isSameType(resource *Resource) bool {
-	return r.Value.Type() == resource.Value.Type()
-}
-
 func (r *Resource) String() string {
 
-	name := "[" + r.Name + "]"
+	name := "[" + r.Name + "] "
 
-	response := fmt.Sprintf("%-14s %24s", name, r.Value.Type().String())
+	response := fmt.Sprintf("%-20s ", name+r.Value.Type().String())
 
 	return response
 }
