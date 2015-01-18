@@ -81,7 +81,7 @@ func validPtrOfValue(value reflect.Value) (reflect.Value, error) {
 }
 
 // Return the Value of the Elem of the given Slice
-func slicePtrToElemValue(value reflect.Value) reflect.Value {
+func slicePtrToElemPtrValue(value reflect.Value) reflect.Value {
 
 	value = elemOfValue(value)
 
@@ -98,9 +98,6 @@ func slicePtrToElemValue(value reflect.Value) reflect.Value {
 	// and set the value of the first Elem inside this Slice
 
 	ptrToElemValue.Elem().Set(value.Index(0))
-
-	// Not tested yet, lets test it...
-	log.Println("TODO slicePtrToElemValue TEST ", ptrToElemValue.Interface())
 
 	return ptrToElemValue
 

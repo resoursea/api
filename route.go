@@ -37,10 +37,7 @@ type Route struct {
 // creating the Route tree
 func NewRoute(r *Resource) (*Route, error) {
 
-	log.Printf("Building Routes for %s\n", r)
-
-	// TODO
-	// Go throug the Elem of Slice Resources!
+	//log.Printf("Building Routes for %s\n", r)
 
 	ro := &Route{
 		Name:     r.Name,
@@ -53,7 +50,7 @@ func NewRoute(r *Resource) (*Route, error) {
 
 	// This Route take the methods of the main resource
 	// and all the resource it Exstends will be mapped too
-	err := ro.scanRoutesFor(r)
+	err := ro.scanRoutesFrom(r)
 	if err != nil {
 		return nil, err
 	}
@@ -68,12 +65,10 @@ func NewRoute(r *Resource) (*Route, error) {
 	// If this Route is for an Slice
 	// Map the Route for this Elem
 	if r.IsSlice {
-		e, err := NewRoute(r.Elem)
+		ro.Elem, err = NewRoute(r.Elem)
 		if err != nil {
 			return nil, err
 		}
-
-		ro.Elem = e
 	}
 
 	// Creating routes recursivelly for each resource child
@@ -99,7 +94,7 @@ func NewRoute(r *Resource) (*Route, error) {
 // We need to scan the methods of the Ptr to the Struct,
 // cause some methods could be attached to the pointer,
 // like func (r *Resource) GET() {}
-func (ro *Route) scanRoutesFor(r *Resource) error {
+func (ro *Route) scanRoutesFrom(r *Resource) error {
 
 	err := ro.scanMethods(r)
 	if err != nil {
@@ -108,7 +103,7 @@ func (ro *Route) scanRoutesFor(r *Resource) error {
 
 	// All the resource it Exstends will be mapped too
 	for _, extend := range r.Extends {
-		err := ro.scanRoutesFor(extend)
+		err := ro.scanRoutesFrom(extend)
 		if err != nil {
 			return err
 		}
@@ -123,7 +118,7 @@ func (ro *Route) scanMethods(r *Resource) error {
 
 	t := r.Value.Type()
 
-	log.Println("Scanning methods from type", t, "is slice:", isSliceType(t))
+	//log.Println("Scanning methods from type", t, "is slice:", isSliceType(t))
 
 	for i := 0; i < t.NumMethod(); i++ {
 
@@ -145,12 +140,12 @@ func (ro *Route) scanMethods(r *Resource) error {
 
 			// Check if this new Handler will conflict with some address of Handler that already exist
 			// Action Handlers Names could conflict with Children Names...
-			err = ro.addressConflict(h)
+			err = ro.checkAddrConflict(h)
 			if err != nil {
 				return err
 			}
 
-			// Index: GETLogin or POST, or POSTMessage...
+			// Index: GETLogin, POST, or POSTMessage...
 			ro.Handlers[h.Method.HTTPMethod+h.Method.Name] = h
 		}
 	}
@@ -182,7 +177,7 @@ func (ro *Route) hasHandler() bool {
 func (ro *Route) AddChild(child *Route) error {
 	//log.Printf("AddChild %s %v\n", child, child.hasHandler())
 
-	// Add this Route to the tree only if it has Elemhandlers
+	// Add this Route to the tree only if it has handlers
 	if child.hasHandler() {
 
 		// Test if this Name wasn't in use yet by one child
@@ -207,7 +202,7 @@ func (ro *Route) AddChild(child *Route) error {
 
 // Check if this new Handler will conflict with some Handler already created
 // Action Handlers Names could conflict with Children Names...
-func (ro *Route) addressConflict(h *handler) error {
+func (ro *Route) checkAddrConflict(h *handler) error {
 
 	for name, child := range ro.Children {
 		if name == h.Method.Name {
@@ -244,18 +239,18 @@ func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, 
 
 	if len(uri) == 1 {
 		// Check if is using some Action of this Resource
-		h, exist := ro.Handlers[uri[0]+httpMethod]
+		h, exist := ro.Handlers[httpMethod+uri[0]]
 		if exist { // Return the action
 			return h, nil
 		}
 
-		log.Println("* action " + uri[0] + httpMethod + " NOT FOUND")
+		log.Println("* action " + httpMethod + uri[0] + " NOT FOUND")
 		//log.Println(ro.Handlers)
 	}
 
 	if ro.IsSlice {
 		// Add this ID to the list
-		ids[ro.Value.Type()] = reflect.ValueOf(ID(uri[0]))
+		ids[ro.Elem.Value.Type()] = reflect.ValueOf(ID(uri[0]))
 
 		return ro.Elem.handler(uri[1:], httpMethod, ids)
 	}
@@ -293,8 +288,8 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	log.Printf("Route found: [%s] %s ids: %q\n",
-		handler.Method.Name+handler.Method.HTTPMethod, req.URL.RequestURI(), ids)
+	log.Printf("Route found: %s = %s ids: %q\n",
+		req.URL.RequestURI(), handler, ids)
 
 	context := newContext(handler, w, req, ids)
 

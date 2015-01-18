@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 )
@@ -49,7 +48,7 @@ func newMethod(m reflect.Method) *method {
 		OutName:    make([]string, m.Type.NumOut()),
 	}
 
-	log.Println("New Method:", met)
+	//log.Println("New Method:", met)
 
 	// Store the input Types in a slice
 	for i := 0; i < met.NumIn; i++ {

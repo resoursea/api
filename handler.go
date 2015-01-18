@@ -16,7 +16,7 @@ type handler struct {
 
 func newHandler(m reflect.Method, r *Resource) (*handler, error) {
 
-	log.Println("Creating Handler for method", m.Name, m.Type)
+	//log.Println("Creating Handler for method", m.Name, m.Type)
 
 	met := newMethod(m)
 
@@ -42,7 +42,7 @@ func newHandler(m reflect.Method, r *Resource) (*handler, error) {
 // when the dependents methods want them
 func (h *handler) newDependency(t reflect.Type, r *Resource) error {
 
-	log.Println("Trying to create a new dependency", t)
+	//log.Println("Trying to create a new dependency", t)
 
 	// If the required resource is http.ResponseWriter or *http.Request or ID
 	// it will be added to context on each request and don't need to be mapped
@@ -58,9 +58,9 @@ func (h *handler) newDependency(t reflect.Type, r *Resource) error {
 	// Check if this type already exists in the dependencies
 	// If it was indexed by another type, this method
 	// ensures that it will be indexed for this type too
-	dp, exist := h.Dependencies.vaueOf(t)
+	_, exist := h.Dependencies.vaueOf(t)
 	if exist {
-		log.Printf("Found dependency %s to use as %s\n", dp.Value, t)
+		//log.Printf("Found dependency %s to use as %s\n", dp.Value, t)
 		return nil // This type already exist in the Dependencies list
 	}
 
@@ -82,7 +82,7 @@ func (h *handler) newDependency(t reflect.Type, r *Resource) error {
 	// cause the Init first argument will requires the Resource itself
 	h.Dependencies[t] = d
 
-	log.Printf("Created dependency %s to use as %s\n", v, t)
+	//log.Printf("Created dependency %s to use as %s\n", v, t)
 
 	// If this Resource has an Init Method,
 	// then we should create it too
@@ -99,7 +99,7 @@ func (h *handler) newInitMethod(d *dependency, r *Resource) error {
 		return nil
 	}
 
-	log.Println("Scanning Init ", m.Type)
+	//log.Println("Scanning Init ", m.Type)
 
 	// Init method should have no return,
 	// or return just the resource itself for idiomatic reasons
@@ -112,7 +112,7 @@ func (h *handler) newInitMethod(d *dependency, r *Resource) error {
 	// and attach it into the Dependency
 	d.Method = newMethod(m)
 
-	log.Println("Scan Dependencies for Init method", d.Method.Method.Type)
+	//log.Println("Scan Dependencies for Init method", d.Method.Method.Type)
 
 	for _, input := range d.Method.Inputs {
 

@@ -3,8 +3,8 @@ package api
 import (
 	"fmt"
 	"log"
-	//"net/http"
-	//"net/http/httptest"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -20,7 +20,7 @@ func TestResource(t *testing.T) {
 		A{
 			Name: "Testing",
 			//X:    X{Test: "Tested"},
-			//Bs: BList{B{Name: "Started"}},
+			Bs: &BList{B{Name: "Started"}},
 			//B: &B{Name: "Setted"},
 		},
 	}
@@ -39,15 +39,12 @@ func TestResource(t *testing.T) {
 
 	PrintRoute(route)
 
-	/*
-		res := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/api/a/bs/login", nil)
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/a/bs/123123", nil)
 
-		route.ServeHTTP(res, req)
+	route.ServeHTTP(res, req)
 
-		fmt.Printf("RETURN: %v\n", res.Body)
-
-	*/
+	fmt.Printf("RETURN: %v\n", res.Body)
 
 	fmt.Println("\n-------- TEST END --------\n")
 
@@ -85,7 +82,8 @@ type BList []B
 
 func (bs *BList) Init() *BList {
 	//log.Println("*** BList Received", d)
-	return &BList{B{Name: "FUCKED"}}
+	bs2 := append(*bs, B{Name: "FUCKED"})
+	return &bs2
 }
 
 func (b *BList) GET() *BList {
@@ -93,7 +91,7 @@ func (b *BList) GET() *BList {
 }
 
 func (b BList) GETLogin() BList {
-	b[0].Name = "ACTION"
+	b[0].Name += " ACTION"
 	return b
 }
 
@@ -105,12 +103,14 @@ type B struct {
 }
 
 func (b *B) Init(id ID) *B {
-	log.Println("*** B ID Received", id)
-	b.Name = id.String()
-	b.Id, _ = id.Int()
+	log.Println("*** B ID Received", id.String())
+	//b.Name = id.String()
+	//b.Id, _ = id.Int()
 	return b
 }
 func (b *B) GET(id ID) *B {
+	//b.Name = "B get" + id.String()
+	b.Id, _ = id.Int()
 	return b
 }
 

@@ -88,7 +88,7 @@ func newResource(value reflect.Value, field reflect.StructField, parent *Resourc
 	// If it is slice, scan the Elem of this slice
 	if resource.IsSlice {
 
-		elemValue := slicePtrToElemValue(value)
+		elemValue := slicePtrToElemPtrValue(value)
 
 		elem, err := newResource(elemValue, field, resource)
 		if err != nil {
@@ -143,7 +143,7 @@ func (parent *Resource) addChild(child *Resource) {
 	// Two children can't have the same name, check it before insert them
 	for _, sibling := range parent.Children {
 		if child.Name == sibling.Name {
-			log.Fatalf("Thwo resources have the same name '%s' \nR1: %s, R2: %s, Parent: %s",
+			log.Fatalf("Two resources have the same name '%s' \nR1: %s, R2: %s, Parent: %s",
 				child.Name, sibling.Value.Type(), child.Value.Type(), parent.Value.Type())
 		}
 	}
@@ -153,7 +153,7 @@ func (parent *Resource) addChild(child *Resource) {
 
 // Return Value of the implementation of some Interface,
 // this Resource that satisfies this interface
-// should be present in this Resource or in its parents recursively
+// should be present in this Resource children or in its parents children recursively
 // If requested type is an Struct return the initial Value of this Type, if exists,
 // if Struct type not contained on the resource tree, create a new empty Value for this Type
 func (r *Resource) valueOf(t reflect.Type) (reflect.Value, error) {
