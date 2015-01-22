@@ -34,157 +34,118 @@ func (c *context) run() []reflect.Value {
 	log.Println("Running Context Handler Method:", c.Handler.Method.Method.Type)
 
 	// Then run the main method
-	// c.Method.Input[0] = the Method Resource Type
 	inputs := c.getInputs(c.Handler.Method)
 
 	return c.Handler.Method.Method.Func.Call(inputs)
 }
 
-// Return the inputs from a list of requested types
-// For the especial case of the ID input, we should know the requesterType
+// Return the inputs Values from a Method
+// For the especial case of the ID input, we should know the requester Type
 func (c *context) getInputs(m *method) []reflect.Value {
 
-	inputsTypes := m.Inputs
+	inputs := m.Inputs
 
-	requesterType := m.Owner
+	requester := m.Owner // Get the requester Type
 
-	inputs := make([]reflect.Value, len(inputsTypes))
+	values := make([]reflect.Value, len(inputs))
 
-	log.Println("Getting inputs:", inputsTypes)
+	log.Println("Getting inputs:", inputs)
 
-	for i, t := range inputsTypes {
+	for i, t := range inputs {
 
 		//log.Println("Getting input", t)
-		inputs[i] = c.valueOf(t, requesterType)
-		//log.Println("Getted", inputs[i], "for", t)
-
-		// If it is requiring the Elem itself, not the pointer to the Elem
-		// Return just the elem, not its pointer
-		// Especial ID case should not be treated
-		if t.Kind() == reflect.Struct && t != idType {
-
-			///////////////
-			// VERY TODO //
-			///////////////
-
-			// Method can return a nil pointer to this resource,
-			// when another method is asking for this a non pointer of this nil resource
-			// TODO!!!
-			// should not requires for a non pointer??
-			// What to do ?
-			// Just injecting an empty elem...
-			if inputs[i].IsNil() {
-				inputs[i] = reflect.New(t).Elem()
-			} else {
-				inputs[i] = inputs[i].Elem()
-			}
-			//log.Println("Transformed", inputs[i], "for", t)
-		}
+		values[i] = c.valueOf(t, requester)
+		//log.Println("Getted", values[i], "for", t)
 
 	}
 
-	//log.Println("Returning inputs:", inputs, "for", inputsTypes)
+	//log.Println("Returning values:", values, "for", inputs)
 
-	return inputs
+	return values
 }
 
-// Get the reflect.Value for the Interface
-// it will ever exist
-func (c *context) valueOf(t reflect.Type, requesterType reflect.Type) reflect.Value {
+// Get the reflect.Value for the required type
+func (c *context) valueOf(t reflect.Type, requester reflect.Type) reflect.Value {
 
 	log.Println("Searching for", t)
 
-	//
-	// Tests for error requestings
-	//
 	// If it is requesting the first error in the list
 	if t == errorType {
-		if len(c.Errors) > 0 {
-			return c.Errors[0]
-		}
-		return errorNilValue
+		return c.errorValue()
 	}
+
 	// If it is requesting the whole error list
 	if t == errorSliceType {
-		errs := make([]error, len(c.Errors))
-		for i, err := range c.Errors {
-			// It will always convert? i think so..
-			errs[i] = err.Interface().(error)
-		}
-		return reflect.ValueOf(errs)
+		return c.errorSliceValue()
 	}
 
-
-	// If it is a normal Interface
-	if t.Kind() == reflect.Interface {
-		return c.interfaceValue(t)
-	}
-
-	// It's an struct
-
-	// Especial case for ID request
+	// If it is requesting the *ID type
 	if t == idPtrType {
-		return c.idValue(requesterType)
+		return c.idValue(requester)
 	}
 
-	// NonPointer Struct and Slices cases
-	if t.Kind() == reflect.Struct || t.Kind() == reflect.Slice {
-		return c.nonPtrValue(t)
+	// So it can only be a Resource Value
+	// Or Request or Writer
+	v := c.resourceValue(t)
+
+	// If it is requiring the Elem itself and it returned a Ptr to Elem
+	if t.Kind() == reflect.Struct && v.Kind() == reflect.Ptr {
+		// It is requiring the Elem of a nil Ptr?
+		// Ok, give it an empty Elem of that Type
+		if v.IsNil() {
+			return reflect.New(t).Elem()
+		}
+
+		return v.Elem()
+		//log.Println("Transformed", v, "for", t)
 	}
 
-	if t.Kind() == reflect.Ptr {
-		return c.ptrValue(t)
-	}
-
-	// It should never occours,
-	// cause it should be treated on the mapping time
-	log.Panicf("Depenency type %s of %s not accepted",
-		"and not treated on the method mapping time\n", t.Kind(), t)
-
-	return reflect.Value{}
+	return v
 }
 
-// Get the reflect.Value for the Interface
-func (c *context) interfaceValue(t reflect.Type) reflect.Value {
-
+// Get the Resource Value of the required Resource Type
+// It could be http.ResponseWriter or *http.Request too
+func (c *context) resourceValue(t reflect.Type) reflect.Value {
 	for _, v := range c.Values {
-		if v.Type().Implements(t) {
-			return v
+		switch t.Kind() {
+		case reflect.Interface:
+			if v.Type().Implements(t) {
+				return v
+			}
+		case reflect.Struct, reflect.Slice: // non-pointer
+			if v.Type().Elem() == t {
+				return v
+			}
+		case reflect.Ptr:
+			if v.Type() == t {
+				return v
+			}
 		}
-	}
 
-	// If this value doesn't exist yet, so initialie it
+	}
+	// It is not present yet, so we need to construct it
 	return c.initDependencie(t)
 }
 
-// Get the reflect.Value for the Struct
-func (c *context) nonPtrValue(t reflect.Type) reflect.Value {
-
-	for _, v := range c.Values {
-		if v.Type().Elem() == t {
-			return v
-		}
+// Return the first error of the list, or an nil error
+func (c *context) errorValue() reflect.Value {
+	if len(c.Errors) > 0 {
+		return c.Errors[0]
 	}
-
-	// If this value doesn't exist yet, so initialie it
-	return c.initDependencie(t)
+	return errorNilValue
 }
 
-// Get the reflect.Value for the Ptr to Struct
-func (c *context) ptrValue(t reflect.Type) reflect.Value {
-
-	for _, v := range c.Values {
-		if v.Type() == t {
-			return v
-		}
+// Return a whole error list
+func (c *context) errorSliceValue() reflect.Value {
+	errs := make([]error, len(c.Errors))
+	for i, err := range c.Errors {
+		errs[i] = err.Interface().(error)
 	}
-
-	// If this value doesn't exist yet, so initialie it
-	return c.initDependencie(t)
+	return reflect.ValueOf(errs)
 }
 
 // Get the reflect.Value for the ID list caught in the URI
-// It returns an empty ID if ID were not passed in the URI
+// It returns an nil *ID if ID were not passed in the URI
 func (c *context) idValue(t reflect.Type) reflect.Value {
 
 	id, exist := c.IDMap[t]
@@ -195,10 +156,6 @@ func (c *context) idValue(t reflect.Type) reflect.Value {
 	// Doesn't exist, returning an empty default ID
 	return nilIDValue
 }
-
-//
-// --------------------------- not used
-//
 
 // Construct all the dependencies level by level
 // Garants that every dependencie exists before be requisited
@@ -241,20 +198,19 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 						c.Errors = append(c.Errors, out[i])
 						//log.Println("### Appending the error!!!!")
 					}
-				} else {
-					// Check if this output is the dependency itself
-					if dependencie.isType(dependencie.Method.Outputs[i]) {
-						//log.Println("### Its just me...", out[i].Type(), out[i].IsValid(), out[i].CanSet(), out[i].CanInterface(), out[i].Type())
+					continue
+				}
+				// Check if this output is the dependency itself
+				if dependencie.isType(dependencie.Method.Outputs[i]) {
+					//log.Println("### Its just me...", out[i].Type(), out[i].IsValid(), out[i].CanSet(), out[i].CanInterface(), out[i].Type())
 
-						// If this method outputs an Elem insted an Ptr to the Elem
-						if dependencie.Method.Outputs[i].Kind() != reflect.Ptr {
-							value := reflect.New(dependencie.Method.Outputs[i])
-							value.Elem().Set(out[i])
-							c.Values[index] = value
-						} else {
-							c.Values[index] = out[i]
-						}
-
+					// If this method outputs an Elem insted an Ptr to the Elem
+					if dependencie.Method.Outputs[i].Kind() != reflect.Ptr {
+						value := reflect.New(dependencie.Method.Outputs[i])
+						value.Elem().Set(out[i])
+						c.Values[index] = value
+					} else {
+						c.Values[index] = out[i]
 					}
 				}
 
