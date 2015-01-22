@@ -40,7 +40,7 @@ func TestResource(t *testing.T) {
 	PrintRoute(route)
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/a/bs/123123", nil)
+	req, _ := http.NewRequest("GET", "/api/a", nil)
 
 	route.ServeHTTP(res, req)
 
@@ -62,14 +62,12 @@ type A struct {
 	//C C // conflit, name 'c' already used
 }
 
-func (a A) Init(s A, b BList) *A {
-	log.Println("Init A received", b)
-	b[0].Name = "Changed"
+func (a A) Init() *A {
 	return &a
 }
 
-func (a *A) GET(x A, b *BList) *A {
-	log.Println("GET A received", b)
+func (a *A) GET(b B, errs []error) *A {
+	log.Println("GET A received", b.Name)
 	return a
 }
 
@@ -102,11 +100,12 @@ type B struct {
 	Cs CList "Tag de C"
 }
 
-func (b *B) Init(id ID) *B {
+func (b *B) Init(id ID) (B, error) {
 	log.Println("*** B ID Received", id.String())
 	//b.Name = id.String()
-	//b.Id, _ = id.Int()
-	return b
+	b.Id = 312312
+	b.Name = "Altered!"
+	return *b, fmt.Errorf("ERROR! LOL!")
 }
 func (b *B) GET(id ID) *B {
 	//b.Name = "B get" + id.String()

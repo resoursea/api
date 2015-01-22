@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 )
 
@@ -95,7 +94,7 @@ func (h *handler) newInitMethod(d *dependency, r *Resource) error {
 
 	m, exists := d.Value.Type().MethodByName("Init")
 	if !exists {
-		log.Printf("Type %s doesn't have Init method\n", d.Value.Type())
+		//log.Printf("Type %s doesn't have Init method\n", d.Value.Type())
 		return nil
 	}
 

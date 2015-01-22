@@ -17,6 +17,7 @@ type method struct {
 	NumIn      int
 	Inputs     []reflect.Type
 	NumOut     int
+	Outputs    []reflect.Type
 	OutName    []string
 }
 
@@ -27,6 +28,8 @@ var httpMethods = [...]string{
 	"DELETE",
 	"HEAD",
 }
+
+//var errorType = reflect.TypeOf(errors.New(""))
 
 func newMethod(m reflect.Method) *method {
 
@@ -45,6 +48,7 @@ func newMethod(m reflect.Method) *method {
 		NumIn:      m.Type.NumIn(),
 		Inputs:     make([]reflect.Type, m.Type.NumIn()),
 		NumOut:     m.Type.NumOut(),
+		Outputs:    make([]reflect.Type, m.Type.NumOut()),
 		OutName:    make([]string, m.Type.NumOut()),
 	}
 
@@ -60,6 +64,10 @@ func newMethod(m reflect.Method) *method {
 
 		// Gets the type of the output
 		t := m.Type.Out(i)
+
+		// Remmember the output type
+		met.Outputs[i] = t
+
 		// If it is an Slice, get the type of the element it carries
 		t = mainElemOfType(t)
 

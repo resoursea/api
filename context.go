@@ -10,6 +10,7 @@ type context struct {
 	Handler *handler
 	Values  []reflect.Value
 	IDMap   idMap
+	Errors  []reflect.Value // To append the errors outputed
 }
 
 // Creates a new context
@@ -23,7 +24,8 @@ func newContext(handler *handler, w http.ResponseWriter, req *http.Request, ids 
 			reflect.ValueOf(w),
 			reflect.ValueOf(req),
 		},
-		IDMap: ids,
+		IDMap:  ids,
+		Errors: []reflect.Value{},
 	}
 }
 
@@ -58,8 +60,23 @@ func (c *context) getInputs(m *method) []reflect.Value {
 
 		// If the input isn't a pointer, we have to transform in an element
 		// Especial ID case should not be treated
-		if t.Kind() != reflect.Ptr && t != idType {
-			inputs[i] = inputs[i].Elem()
+		if t.Kind() != reflect.Ptr && t != idType && t.Kind() != reflect.Slice {
+
+			///////////////
+			// VERY TODO //
+			///////////////
+
+			// Method can return a nil pointer to this resource,
+			// when another method is asking for this a non pointer of this nil resource
+			// TODO!!!
+			// should not requires for a non pointer??
+			// What to do ?
+			// Just injecting an empty elem...
+			if inputs[i].IsNil() {
+				inputs[i] = reflect.New(t).Elem()
+			} else {
+				inputs[i] = inputs[i].Elem()
+			}
 			//log.Println("Transformed", inputs[i], "for", t)
 		}
 
@@ -75,6 +92,26 @@ func (c *context) getInputs(m *method) []reflect.Value {
 func (c *context) valueOf(t reflect.Type, requesterType reflect.Type) reflect.Value {
 
 	log.Println("Searching for", t)
+
+	// Tests for error requesting
+
+	// If it is requesting the first error in the list
+	if t == errorType {
+		if len(c.Errors) > 0 {
+			return c.Errors[0]
+		}
+		return errorNilValue
+	}
+
+	// If it is requesting the whole error list
+	if t == errorSliceType {
+		errors := make([]error, len(c.Errors))
+		for i, err := range c.Errors {
+			// It will always convert? i think so..
+			errors[i] = err.Interface().(error)
+		}
+		return reflect.ValueOf(errors)
+	}
 
 	if t.Kind() == reflect.Interface {
 		return c.interfaceValue(t)
@@ -191,9 +228,34 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 		// its values updated
 		if dependencie.Method.NumOut > 0 {
 
-			log.Println("Replacing Initial value of", c.Values[index])
+			for i := 0; i < dependencie.Method.NumOut; i++ {
 
-			c.Values[index] = out[0]
+				//log.Println("### Threating output:", dependencie.Method.Outputs[i])
+
+				if dependencie.Method.Outputs[i] == errorType {
+					//log.Println("### Fucking shit error!!!!", out[i].IsNil(), out[i].IsValid(), out[i].CanSet(), out[i].CanInterface())
+					if !out[i].IsNil() {
+						c.Errors = append(c.Errors, out[i])
+						//log.Println("### Appending the error!!!!")
+					}
+				} else {
+					// Check if this output is the dependency itself
+					if dependencie.isType(dependencie.Method.Outputs[i]) {
+						//log.Println("### Its just me...", out[i].Type(), out[i].IsValid(), out[i].CanSet(), out[i].CanInterface(), out[i].Type())
+
+						// If this method outputs an Elem insted an Ptr to the Elem
+						if dependencie.Method.Outputs[i].Kind() != reflect.Ptr {
+							value := reflect.New(dependencie.Method.Outputs[i])
+							value.Elem().Set(out[i])
+							c.Values[index] = value
+						} else {
+							c.Values[index] = out[i]
+						}
+
+					}
+				}
+
+			}
 		}
 	}
 

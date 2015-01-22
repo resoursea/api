@@ -86,16 +86,14 @@ func printDependency(t reflect.Type, d *dependency, lvl int) {
 
 	if d.Method != nil {
 		fmt.Printf(" Init Input:")
+		for _, input := range d.Method.Inputs {
+			fmt.Printf(" %-24s", input)
+		}
 	} else {
 		fmt.Printf(" Desn't have Init method")
 	}
 
-	for _, input := range d.Method.Inputs {
-		fmt.Printf(" %-24s", input)
-	}
-
 	fmt.Println()
-
 }
 
 // Print the Resource the stack,

@@ -196,6 +196,8 @@ func (ro *Route) AddChild(child *Route) error {
 		}
 
 		ro.Children[child.Name] = child
+
+		//log.Printf("Child name %s added %s\n", child.Name, child)
 	}
 	return nil
 }
@@ -223,47 +225,51 @@ func (ro *Route) String() string {
 }
 
 // Return the Route from the especified Name
+// Fulfill the ID Map with IDs present in the requested URI
 func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, error) {
 
-	log.Println("Route Handling", uri, " in the ", ro.Value.Type())
+	log.Println("Route Handling", uri, "in the", ro)
 
-	// Check if we should return
-	// some Slice Handler of this Route
+	// Check if is trying to request some Handler of this Route
 	if len(uri) == 0 {
 		h, exist := ro.Handlers[httpMethod]
 		if !exist {
-			return nil, errors.New("No Method " + httpMethod + " in the " + ro.Name)
+			return nil, fmt.Errorf("Method %s not found in the %s", httpMethod, ro)
 		}
 		return h, nil
 	}
 
+	// Check if is trying to request some Action Handler of this Route
 	if len(uri) == 1 {
-		// Check if is using some Action of this Resource
+
 		h, exist := ro.Handlers[httpMethod+uri[0]]
-		if exist { // Return the action
+		if exist {
 			return h, nil
 		}
 
-		log.Println("* action " + httpMethod + uri[0] + " NOT FOUND")
-		//log.Println(ro.Handlers)
+		// It is not an error, cause could have an resources with this name, not an action
+		log.Println("Action " + httpMethod + uri[0] + " NOT FOUND")
 	}
 
+	// If we are in a Slice Route, get its ID and search in the Elem Route
 	if ro.IsSlice {
-		// Add this ID to the list
+		// Add its ID to the Map
 		ids[ro.Elem.Value.Type()] = reflect.ValueOf(ID(uri[0]))
 
 		return ro.Elem.handler(uri[1:], httpMethod, ids)
 	}
 
+	// If we are in an Elem Route, the only possibility is to have a Child with this Name
 	child, exist := ro.Children[uri[0]]
 	if exist {
 		return child.handler(uri[1:], httpMethod, ids)
 	}
 
-	return nil, errors.New("Route " + ro.Name + " doesn't any Child or Action " + uri[0])
+	return nil, fmt.Errorf("Not exist any Child or Action with name '%s' in the %s", uri[0], ro)
 }
 
-// To implement http.Handler
+// Implementing the http.Handler Interface
+// TODO: Error messages should be sent in JSON
 func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	log.Println("### Serving the resource", req.URL.RequestURI())
 
@@ -271,9 +277,7 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Remember to descart the first empty element of the list
 	uri := strings.Split(req.URL.RequestURI(), "/")[1:]
 
-	//log.Printf("URI: %v\n", uri)
-
-	// Check if this main Route matches with the requested URI
+	// Check if the requested URI maches with this main Route
 	if ro.Name != uri[0] {
 		http.Error(w, "Route "+ro.Name+" not match with "+uri[0], http.StatusNotFound)
 		return
@@ -291,17 +295,23 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	log.Printf("Route found: %s = %s ids: %q\n",
 		req.URL.RequestURI(), handler, ids)
 
-	context := newContext(handler, w, req, ids)
+	// Process the request with the found Handler
+	output := newContext(handler, w, req, ids).run()
 
-	output := context.run()
+	// If there is no output to sent back
+	if handler.Method.NumOut == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 
-	// If there is jsut one resource to send back
+	// If there is just one resource to send back
 	if handler.Method.NumOut == 1 {
 
-		// Compile our response in JSON
+		// Encode the output in JSON
 		jsonResponse, err := json.MarshalIndent(output[0].Interface(), "", "\t")
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Error encoding to Json: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -310,8 +320,7 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// If there is no resource, answare with empty list
-	// if there is more than one, put them on list
+	// If there is more than one output
 
 	// Trans form the method output into an slice of the values
 	// * Needed to generate a JSON response
@@ -320,10 +329,10 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		response[handler.Method.OutName[i]] = v.Interface()
 	}
 
-	// Compile our response in JSON
+	// Encode the output in JSON
 	jsonResponse, err := json.MarshalIndent(response, "", "\t")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error encoding to Json: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

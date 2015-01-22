@@ -15,11 +15,15 @@ var (
 	tesponseWriterType    = responseWriterPtrType.Elem()
 	requestPtrType        = reflect.TypeOf((*http.Request)(nil))
 	requestType           = requestPtrType.Elem()
+	errorSliceType        = reflect.TypeOf(([]error)(nil))
+	errorType             = errorSliceType.Elem()
+	errorNilValue         = reflect.ValueOf((error)(nil))
 )
 
 // This method return true if the received type is an context type
 // It means that it doesn't need to be mapped and will be present in the context
 // It also return an error message if user used *http.ResponseWriter or used http.Request
+// Context types include error and []error Types
 func isContextType(resourceType reflect.Type) bool {
 	// Test if user used *http.ResponseWriter insted of http.ResponseWriter
 	if resourceType.AssignableTo(responseWriterPtrType) {
@@ -36,6 +40,8 @@ func isContextType(resourceType reflect.Type) bool {
 
 	return resourceType.AssignableTo(tesponseWriterType) ||
 		resourceType.AssignableTo(requestPtrType) ||
+		resourceType.AssignableTo(errorType) ||
+		resourceType.AssignableTo(errorSliceType) ||
 		resourceType == idType
 }
 
@@ -193,19 +199,32 @@ func isSliceType(t reflect.Type) bool {
 // it should alter the first argument as a pointer
 // Or, at least, return itself
 func isValidInit(method reflect.Method) error {
-	// If it has no output it's accepted
-	if method.Type.NumOut() == 0 {
-		return nil
+
+	// Test if Init method return itself and/or error types
+	// just one of each type is accepted
+	itself := false
+	err := false
+
+	//errorType := reflect.TypeOf(errors.New("432"))
+
+	// Method Struct owner Type
+	owner := mainElemOfType(method.Type.In(0))
+	for i := 0; i < method.Type.NumOut(); i++ {
+		t := mainElemOfType(method.Type.Out(i))
+		if t == owner && !itself {
+			itself = true
+			continue
+		}
+		if t == errorType && !err {
+			err = true
+			continue
+		}
+
+		return fmt.Errorf("Resource %s has an invalid Init method %s. "+
+			"It can't outputs %s \n", method.Type.In(0), method.Type, t)
 	}
 
-	// It could return just one resource, itself
-	if method.Type.NumOut() == 1 && method.Type.In(0) == method.Type.Out(0) {
-		return nil
-	}
-
-	return fmt.Errorf("Resource %s has an invalid Init method %s \n"+
-		"It should have no return, or just return an Pointer to the Resource itself %s",
-		method.Type.In(0), method.Type, method.Type.In(0))
+	return nil
 }
 
 // Return true if given StructField is an exported Field
