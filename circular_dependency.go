@@ -80,9 +80,9 @@ func (c *circularDependency) checkDependency(dependency *dependency, h *handler)
 				continue
 			}
 
-			// IDs types desn't need to be checked,
-			// cause it will be present in the context
-			if t == idType {
+			// All context types doesn't need to be checked
+			// it will always be present in the context
+			if isContextType(t) {
 				continue
 			}
 

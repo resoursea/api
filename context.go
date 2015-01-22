@@ -123,7 +123,7 @@ func (c *context) valueOf(t reflect.Type, requesterType reflect.Type) reflect.Va
 	// It's an struct
 
 	// Especial case for ID request
-	if t == idType {
+	if t == idPtrType {
 		return c.idValue(requesterType)
 	}
 
@@ -193,7 +193,7 @@ func (c *context) idValue(t reflect.Type) reflect.Value {
 	}
 
 	// Doesn't exist, returning an empty default ID
-	return emptyIDValue
+	return nilIDValue
 }
 
 //

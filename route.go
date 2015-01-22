@@ -254,7 +254,8 @@ func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, 
 	// If we are in a Slice Route, get its ID and search in the Elem Route
 	if ro.IsSlice {
 		// Add its ID to the Map
-		ids[ro.Elem.Value.Type()] = reflect.ValueOf(ID(uri[0]))
+		id := &ID{id: uri[0]}
+		ids[ro.Elem.Value.Type()] = reflect.ValueOf(id)
 
 		return ro.Elem.handler(uri[1:], httpMethod, ids)
 	}

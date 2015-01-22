@@ -33,16 +33,16 @@ func isContextType(resourceType reflect.Type) bool {
 	if resourceType.AssignableTo(requestType) {
 		log.Fatalf("You asked for %s when you should used %s", resourceType, requestPtrType)
 	}
-	// Test if user used *ID insted of ID
-	if resourceType.AssignableTo(idPtrType) {
-		log.Fatalf("You asked for %s when you should used %s", idPtrType, idType)
+	// Test if user used ID insted of *ID
+	if resourceType.AssignableTo(idType) {
+		log.Fatalf("You asked for %s when you should used %s", idType, idPtrType)
 	}
 
 	return resourceType.AssignableTo(tesponseWriterType) ||
 		resourceType.AssignableTo(requestPtrType) ||
 		resourceType.AssignableTo(errorType) ||
 		resourceType.AssignableTo(errorSliceType) ||
-		resourceType == idType
+		resourceType == idPtrType
 }
 
 // Return the Ptr to the given Value if passed one of those types

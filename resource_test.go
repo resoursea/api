@@ -100,14 +100,18 @@ type B struct {
 	Cs CList "Tag de C"
 }
 
-func (b *B) Init(id ID) (B, error) {
-	log.Println("*** B ID Received", id.String())
+func (b *B) Init(id *ID) (B, error) {
+	if id != nil {
+		log.Println("*** B ID Received", id.String())
+	} else {
+		log.Println("*** B ID NOT RECEIVED")
+	}
 	//b.Name = id.String()
 	b.Id = 312312
 	b.Name = "Altered!"
 	return *b, nil//fmt.Errorf("ERROR! LOL!")
 }
-func (b *B) GET(id ID) *B {
+func (b *B) GET(id *ID) *B {
 	//b.Name = "B get" + id.String()
 	b.Id, _ = id.Int()
 	return b
@@ -121,7 +125,7 @@ type C struct {
 	Nothing string
 }
 
-func (c *C) Init(id ID, b B, a A) {
+func (c *C) Init(id *ID, b B, a A) {
 	log.Println("*** C Received ID:", id)
 	c.Id, _ = id.Int()
 	c.BId = b.Id

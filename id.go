@@ -9,15 +9,19 @@ import (
 // Ex: resource/123/child/321
 // Resource will receive the ID 123 in its arguments,
 // ans its child will receive the ID 321 when asked for it
-type ID string
+type ID struct {
+	id string
+}
 
 type idMap map[reflect.Type]reflect.Value
 
-var idType = reflect.TypeOf(ID(""))
+var nilID *ID
 
-var idPtrType = reflect.TypeOf(reflect.New(idType))
+var nilIDValue = reflect.ValueOf(nilID)
 
-var emptyIDValue = reflect.ValueOf(ID(""))
+var idPtrType = reflect.TypeOf(nilID)
+
+var idType = idPtrType.Elem()
 
 func (i idMap) extend(ids idMap) {
 	for t, v := range ids {
@@ -26,7 +30,7 @@ func (i idMap) extend(ids idMap) {
 }
 
 func (id ID) String() string {
-	return string(id)
+	return id.id
 }
 
 func (id ID) Int() (int, error) {
