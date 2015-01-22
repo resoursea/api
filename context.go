@@ -54,9 +54,9 @@ func (c *context) getInputs(m *method) []reflect.Value {
 
 	for i, t := range inputsTypes {
 
-		//log.Println("Getting input", t)
+		log.Println("Getting input", t)
 		inputs[i] = c.valueOf(t, requesterType)
-		//log.Println("Getted", inputs[i], "for", t)
+		log.Println("Getted", inputs[i], "for", t)
 
 		// If the input isn't a pointer, we have to transform in an element
 		// Especial ID case should not be treated
@@ -72,6 +72,7 @@ func (c *context) getInputs(m *method) []reflect.Value {
 			// should not requires for a non pointer??
 			// What to do ?
 			// Just injecting an empty elem...
+			log.Println("### FUCK:", inputs[i], inputs[i].IsValid())
 			if inputs[i].IsNil() {
 				inputs[i] = reflect.New(t).Elem()
 			} else {
@@ -100,6 +101,7 @@ func (c *context) valueOf(t reflect.Type, requesterType reflect.Type) reflect.Va
 		if len(c.Errors) > 0 {
 			return c.Errors[0]
 		}
+		log.Println("SHIIIIIIIIT")
 		return errorNilValue
 	}
 

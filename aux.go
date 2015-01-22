@@ -17,7 +17,7 @@ var (
 	requestType           = requestPtrType.Elem()
 	errorSliceType        = reflect.TypeOf(([]error)(nil))
 	errorType             = errorSliceType.Elem()
-	errorNilValue         = reflect.ValueOf((error)(nil))
+	errorNilValue         = reflect.New(errorType).Elem()
 )
 
 // This method return true if the received type is an context type

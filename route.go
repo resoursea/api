@@ -326,7 +326,25 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// * Needed to generate a JSON response
 	response := make(map[string]interface{}, handler.Method.NumOut)
 	for i, v := range output {
-		response[handler.Method.OutName[i]] = v.Interface()
+		log.Println("### ", v.Type(), v.Interface())
+		if !v.IsNil() {
+			// Error is printing empty structs, treat that...
+			if handler.Method.Outputs[i] == errorType {
+				response[handler.Method.OutName[i]] = v.Interface().(error).Error()
+				continue
+			}
+			if handler.Method.Outputs[i] == errorSliceType {
+
+				errs := ""
+				for _, err := range v.Interface().([]error) {
+					errs += err.Error() + ". "
+				}
+				response[handler.Method.OutName[i]] = errs
+				continue
+			}
+
+			response[handler.Method.OutName[i]] = v.Interface()
+		}
 	}
 
 	// Encode the output in JSON
