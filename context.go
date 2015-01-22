@@ -14,9 +14,9 @@ type context struct {
 }
 
 // Creates a new context
-// It creates the initial state used to answer a request
+// It creates the initial state used to answer the request
 // Since states are not allowed to be stored on te server,
-// the request state is all the service has to answer a request
+// this initial state is all the service has to answer a request
 func newContext(handler *handler, w http.ResponseWriter, req *http.Request, ids idMap) *context {
 	return &context{
 		Handler: handler,
@@ -54,13 +54,14 @@ func (c *context) getInputs(m *method) []reflect.Value {
 
 	for i, t := range inputsTypes {
 
-		log.Println("Getting input", t)
+		//log.Println("Getting input", t)
 		inputs[i] = c.valueOf(t, requesterType)
-		log.Println("Getted", inputs[i], "for", t)
+		//log.Println("Getted", inputs[i], "for", t)
 
-		// If the input isn't a pointer, we have to transform in an element
+		// If it is requiring the Elem itself, not the pointer to the Elem
+		// Return just the elem, not its pointer
 		// Especial ID case should not be treated
-		if t.Kind() != reflect.Ptr && t != idType && t.Kind() != reflect.Slice {
+		if t.Kind() == reflect.Struct && t != idType {
 
 			///////////////
 			// VERY TODO //
@@ -72,7 +73,6 @@ func (c *context) getInputs(m *method) []reflect.Value {
 			// should not requires for a non pointer??
 			// What to do ?
 			// Just injecting an empty elem...
-			log.Println("### FUCK:", inputs[i], inputs[i].IsValid())
 			if inputs[i].IsNil() {
 				inputs[i] = reflect.New(t).Elem()
 			} else {
@@ -94,27 +94,28 @@ func (c *context) valueOf(t reflect.Type, requesterType reflect.Type) reflect.Va
 
 	log.Println("Searching for", t)
 
-	// Tests for error requesting
-
+	//
+	// Tests for error requestings
+	//
 	// If it is requesting the first error in the list
 	if t == errorType {
 		if len(c.Errors) > 0 {
 			return c.Errors[0]
 		}
-		log.Println("SHIIIIIIIIT")
 		return errorNilValue
 	}
-
 	// If it is requesting the whole error list
 	if t == errorSliceType {
-		errors := make([]error, len(c.Errors))
+		errs := make([]error, len(c.Errors))
 		for i, err := range c.Errors {
 			// It will always convert? i think so..
-			errors[i] = err.Interface().(error)
+			errs[i] = err.Interface().(error)
 		}
-		return reflect.ValueOf(errors)
+		return reflect.ValueOf(errs)
 	}
 
+
+	// If it is a normal Interface
 	if t.Kind() == reflect.Interface {
 		return c.interfaceValue(t)
 	}

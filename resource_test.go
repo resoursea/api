@@ -66,8 +66,8 @@ func (a A) Init() *A {
 	return &a
 }
 
-func (a *A) GET(b B, errs []error) *A {
-	log.Println("GET A received", b.Name)
+func (a *A) GET(b B, err error) *A {
+	log.Println("GET A received", err)
 	return a
 }
 
@@ -105,7 +105,7 @@ func (b *B) Init(id ID) (B, error) {
 	//b.Name = id.String()
 	b.Id = 312312
 	b.Name = "Altered!"
-	return *b, fmt.Errorf("ERROR! LOL!")
+	return *b, nil//fmt.Errorf("ERROR! LOL!")
 }
 func (b *B) GET(id ID) *B {
 	//b.Name = "B get" + id.String()
