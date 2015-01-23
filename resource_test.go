@@ -9,6 +9,7 @@ import (
 )
 
 type API struct {
+	a A
 	A A
 }
 
@@ -17,7 +18,7 @@ type API struct {
 //
 func TestResource(t *testing.T) {
 	api := API{
-		A{
+		A: A{
 			Name: "Testing",
 			//X:    X{Test: "Tested"},
 			Bs: &BList{B{Name: "Started"}},
@@ -109,7 +110,7 @@ func (b *B) Init(id *ID) (B, error) {
 	//b.Name = id.String()
 	b.Id = 312312
 	b.Name = "Altered!"
-	return *b, nil//fmt.Errorf("ERROR! LOL!")
+	return *b, nil //fmt.Errorf("ERROR! LOL!")
 }
 func (b *B) GET(id *ID) *B {
 	//b.Name = "B get" + id.String()
@@ -135,7 +136,7 @@ func (c *C) GET() *C {
 	return c
 }
 
-type CList []C
+type CList []*C
 
 func (c *CList) Init() {
 	//log.Println("*** C Received", d)
