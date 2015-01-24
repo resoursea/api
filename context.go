@@ -31,7 +31,7 @@ func newContext(handler *handler, w http.ResponseWriter, req *http.Request, ids 
 
 func (c *context) run() []reflect.Value {
 
-	log.Println("Running Context Handler Method:", c.Handler.Method.Method.Type)
+	//log.Println("Running Context Handler Method:", c.Handler.Method.Method.Type)
 
 	// Then run the main method
 	inputs := c.getInputs(c.Handler.Method)
@@ -49,7 +49,7 @@ func (c *context) getInputs(m *method) []reflect.Value {
 
 	values := make([]reflect.Value, len(inputs))
 
-	log.Println("Getting inputs:", inputs)
+	//log.Println("Getting inputs:", inputs)
 
 	for i, t := range inputs {
 
@@ -67,7 +67,7 @@ func (c *context) getInputs(m *method) []reflect.Value {
 // Get the reflect.Value for the required type
 func (c *context) valueOf(t reflect.Type, requester reflect.Type) reflect.Value {
 
-	log.Println("Searching for", t)
+	//log.Println("Searching for", t)
 
 	// If it is requesting the first error in the list
 	if t == errorType {
@@ -166,12 +166,13 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 		log.Panicf("Dependencie %s not mapped!!!", t)
 	}
 
-	log.Println("Constructing dependency", dependencie.Value.Type())
+	//log.Println("Constructing dependency", dependencie.Value.Type())
 
 	// This Value will be mapped in the index index
 	index := len(c.Values)
 
-	c.Values = append(c.Values, dependencie.Value)
+	// Instanciate a new dependency and add it to the list
+	c.Values = append(c.Values, dependencie.init())
 
 	if dependencie.Method != nil {
 
@@ -179,7 +180,7 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 
 		out := make([]reflect.Value, dependencie.Method.Method.Type.NumOut())
 
-		log.Printf("Calling %s with %q \n", dependencie.Method.Method.Type, inputs)
+		//log.Printf("Calling %s with %q \n", dependencie.Method.Method.Type, inputs)
 
 		out = dependencie.Method.Method.Func.Call(inputs)
 
@@ -218,7 +219,7 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 		}
 	}
 
-	log.Println("Constructed", c.Values[index], "for", t, "value", c.Values[index].Interface())
+	//log.Println("Constructed", c.Values[index], "for", t, "value", c.Values[index].Interface())
 
 	return c.Values[index]
 }

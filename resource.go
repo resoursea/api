@@ -59,7 +59,7 @@ func newResource(value reflect.Value, field reflect.StructField, parent *Resourc
 	// Garants we are working with a Ptr to Struct or Slice
 	value = ptrOfValue(value)
 
-	//log.Println("Scanning Struct:", value.Type(), "name:", strings.ToLower(field.Name))
+	//log.Println("Scanning Struct:", value.Type(), "name:", strings.ToLower(field.Name), value.Interface())
 
 	resource := &Resource{
 		Name:      strings.ToLower(field.Name),
@@ -100,7 +100,7 @@ func newResource(value reflect.Value, field reflect.StructField, parent *Resourc
 		field := value.Elem().Type().Field(i)
 		fieldValue := value.Elem().Field(i)
 
-		//log.Println("Field:", field.Name, field.Type, "of", value.Elem().Type())
+		//log.Println("Field:", field.Name, field.Type, "of", value.Elem().Type(), "is valid", isValidValue(fieldValue))
 
 		// Check if this field is exported: fieldValue.CanInterface()
 		// and if this field is valid fo create Resources: Structs or Slices of Structs

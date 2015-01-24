@@ -56,3 +56,10 @@ func (d *dependency) isType(t reflect.Type) bool {
 	// is from Type Ptr to Struct, or Ptr to Slice of Struct
 	return d.Value.Type() == ptrOfType(t)
 }
+
+// Cosntruct a new dependency in a new memory space with the initial dependency value
+func (d *dependency) init() reflect.Value {
+	v := reflect.New(d.Value.Type().Elem())
+	v.Elem().Set(d.Value.Elem())
+	return v
+}

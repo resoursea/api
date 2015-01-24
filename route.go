@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"reflect"
 	"strings"
@@ -228,7 +227,7 @@ func (ro *Route) String() string {
 // Fulfill the ID Map with IDs present in the requested URI
 func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, error) {
 
-	log.Println("Route Handling", uri, "in the", ro)
+	//log.Println("Route Handling", uri, "in the", ro)
 
 	// Check if is trying to request some Handler of this Route
 	if len(uri) == 0 {
@@ -248,7 +247,7 @@ func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, 
 		}
 
 		// It is not an error, cause could have an resources with this name, not an action
-		log.Println("Action " + httpMethod + uri[0] + " NOT FOUND")
+		//log.Println("Action " + httpMethod + uri[0] + " NOT FOUND")
 	}
 
 	// If we are in a Slice Route, get its ID and search in the Elem Route
@@ -266,21 +265,22 @@ func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, 
 		return child.handler(uri[1:], httpMethod, ids)
 	}
 
-	return nil, fmt.Errorf("Not exist any Child or Action with name '%s' in the %s", uri[0], ro)
+	return nil, fmt.Errorf("Not exist any Child '%s' or Action '%s' in the %s", uri[0], httpMethod+strings.Title(uri[0]), ro)
 }
 
 // Implementing the http.Handler Interface
 // TODO: Error messages should be sent in JSON
 func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	log.Println("### Serving the resource", req.URL.RequestURI())
+	//log.Println("### Serving the resource", req.URL.RequestURI())
 
 	// Get the resource identfiers from the URL
+	// Remember to descart the query string: ?q=sfxt&x=132...
 	// Remember to descart the first empty element of the list
-	uri := strings.Split(req.URL.RequestURI(), "/")[1:]
+	uri := strings.Split(strings.Split(req.URL.RequestURI(), "?")[0], "/")[1:]
 
 	// Check if the requested URI maches with this main Route
 	if ro.Name != uri[0] {
-		http.Error(w, "Route "+ro.Name+" not match with "+uri[0], http.StatusNotFound)
+		writeError(w, errors.New("Route "+ro.Name+" not match with "+uri[0]), http.StatusNotFound)
 		return
 	}
 
@@ -289,12 +289,11 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	handler, err := ro.handler(uri[1:], req.Method, ids)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		writeError(w, err, http.StatusNotFound)
 		return
 	}
 
-	log.Printf("Route found: %s = %s ids: %q\n",
-		req.URL.RequestURI(), handler, ids)
+	//log.Printf("Route found: %s = %s ids: %q\n", req.URL.RequestURI(), handler, ids)
 
 	// Process the request with the found Handler
 	output := newContext(handler, w, req, ids).run()
@@ -312,7 +311,7 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		// Encode the output in JSON
 		jsonResponse, err := json.MarshalIndent(output[0].Interface(), "", "\t")
 		if err != nil {
-			http.Error(w, "Error encoding to Json: "+err.Error(), http.StatusInternalServerError)
+			writeError(w, errors.New("Error encoding to Json: "+err.Error()), http.StatusInternalServerError)
 			return
 		}
 
@@ -327,7 +326,6 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// * Needed to generate a JSON response
 	response := make(map[string]interface{}, handler.Method.NumOut)
 	for i, v := range output {
-		log.Println("### ", v.Type(), v.Interface())
 		if !v.IsNil() {
 			// Error is printing empty structs, treat that...
 			if handler.Method.Outputs[i] == errorType {
@@ -351,7 +349,19 @@ func (ro *Route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Encode the output in JSON
 	jsonResponse, err := json.MarshalIndent(response, "", "\t")
 	if err != nil {
-		http.Error(w, "Error encoding to Json: "+err.Error(), http.StatusInternalServerError)
+		writeError(w, errors.New("Error encoding to Json: "+err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
+}
+
+func writeError(w http.ResponseWriter, err error, status int) {
+	// Encode the output in JSON
+	jsonResponse, err := json.MarshalIndent(map[string]string{"error": err.Error()}, "", "\t")
+	if err != nil {
+		http.Error(w, "{error: \"Error encoding the error message to Json: "+err.Error()+"\"}", http.StatusInternalServerError)
 		return
 	}
 

@@ -44,16 +44,18 @@ func isContextType(resourceType reflect.Type) bool {
 		resourceType == idPtrType
 }
 
-// Return the Ptr to the given Value...
+// Return one Ptr to the given Value...
 // - If receive Struct or *Struct, resturn *Struct
 // - If receive []Struct, return *[]Struct
 // - If receive []*Struct, return *[]*Struct
 func ptrOfValue(value reflect.Value) reflect.Value {
-	if value.Kind() == reflect.Ptr {
-		return value
+	ptr := reflect.New(elemOfType(value.Type()))
+	if value.Kind() == reflect.Ptr && !value.IsNil() {
+		ptr.Elem().Set(value.Elem())
 	}
-	ptr := reflect.New(value.Type())
-	ptr.Elem().Set(value)
+	if value.Kind() == reflect.Struct {
+		ptr.Elem().Set(value)
+	}
 	return ptr
 }
 

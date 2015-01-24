@@ -9,8 +9,9 @@ import (
 )
 
 type API struct {
-	a A
-	A A
+	a  A
+	A  A
+	A2 *A
 }
 
 //
@@ -18,12 +19,14 @@ type API struct {
 //
 func TestResource(t *testing.T) {
 	api := API{
+	/*
 		A: A{
 			Name: "Testing",
 			//X:    X{Test: "Tested"},
 			Bs: &BList{B{Name: "Started"}},
 			//B: &B{Name: "Setted"},
 		},
+	*/
 	}
 
 	resource, err := NewResource(api)
