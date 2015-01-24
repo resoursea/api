@@ -89,3 +89,4 @@ To GET your new Resource, open any browser and type `http://localhost:8080/resou
 * [Leave us a comment](https://docs.google.com/forms/d/1GCKn7yN4UYsS4Pv7p2cwHPRfdrURbvB0ajQbaTJrtig/viewform)
 * [Twitter](https://twitter.com/resoursea)
 
+ © 2014 Resoursea under the Apache License, Version 2.0
