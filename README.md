@@ -1,7 +1,9 @@
 # Resoursea
 A high productivity web framework for quickly writing resource based services.
 
-With this framework you can really focus on the resources and how they are served by your service and leaves the tool to manage them.
+The easiest way to write REST services highly scalable.  As Fielding wrote in his doctoral dissertation: REST is how the web should work.
+
+With this framework you can really focus on the resources, the base of the REST architecture, and how they are served by your service and leaves the tool to manage them for you, injecting it when needed.
 
 This framework is written in [Golang](http://golang.org/) and uses its powerful decentralized package manager.
 
@@ -44,7 +46,6 @@ import (
 var route *api.Route
 
 func init() {
-
 	resource, err := api.NewResource(Resource{
 		Message: "Hello World!",
 	})
