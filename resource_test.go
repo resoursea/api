@@ -57,7 +57,7 @@ type A struct {
 	//C C // conflit, name 'c' already used
 }
 
-func (a A) Init() *A {
+func (a A) Init(ss A) *A {
 	return &a
 }
 
