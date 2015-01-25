@@ -1,11 +1,9 @@
 # Resoursea
-A high productivity web framework for quickly writing resource based services.
+A high productivity web framework for quickly writing resource based services fully implementing the REST architectural style.
 
-The easiest way to write REST services highly scalable.  As Fielding wrote in his doctoral dissertation: REST is how the web should work.
+The base for the REST are the Resources. This framework allows you to really focus on the Resources and how it behaves. And you can let the tool for routing the requests and inject the dependencies when needed.
 
-With this framework you can really focus on the resources, the base of the REST architecture, and how they are served by your service and leaves the tool to manage them for you, injecting it when needed.
-
-This framework is written in [Golang](http://golang.org/) and uses its powerful decentralized package manager.
+This framework is written in [Golang](http://golang.org/) and uses the power of its implicit Interface and decentralized package manager.
 
 ## Getting Started
 
@@ -82,9 +80,7 @@ To GET your new Resource, open any browser and type `http://localhost:8080/resou
 
 REST is a set of architectural principles for design web services with a focus on Resources, including how they are addressed and transferred through the HTTP protocol for a wide range of clients written in different languages​​.
 
-However, there were no current tool on the market that allows a level of abstraction that allows you to focus only on the resources, until now.
-
-With this tool you focus only on resources and how they are served and the tool takes care of routes your resources and inject the required resources to process the request.
+However, there were no current tool on the market that allows a level of abstraction that allows you to focus only on the resources, until now. With this tool you focus only on resources and how they are served and the tool takes care of routes your resources and inject the required resources to process the request.
 
 ## The Resource Tree
 
