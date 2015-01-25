@@ -19,34 +19,25 @@ type API struct {
 //
 func TestResource(t *testing.T) {
 	api := API{
-	/*
 		A: A{
 			Name: "Testing",
 			//X:    X{Test: "Tested"},
 			Bs: &BList{B{Name: "Started"}},
 			//B: &B{Name: "Setted"},
 		},
-	*/
 	}
 
-	resource, err := NewResource(api)
+	rt, err := NewRoute(api)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	PrintResource(resource)
-
-	route, err := NewRoute(resource)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	PrintRoute(route)
+	PrintRouter(rt)
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/a", nil)
+	req, _ := http.NewRequest("GET", "/api/a/bs/123", nil)
 
-	route.ServeHTTP(res, req)
+	rt.ServeHTTP(res, req)
 
 	fmt.Printf("RETURN: %v\n", res.Body)
 

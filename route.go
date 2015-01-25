@@ -9,6 +9,17 @@ import (
 	"strings"
 )
 
+type Router interface {
+	String() string
+	Children() []Router
+	Handlers() []Handler
+	http.Handler
+}
+
+type Handler interface {
+	String() string
+}
+
 type Route struct {
 	// The resource name
 	Name string
@@ -23,18 +34,52 @@ type Route struct {
 	// Methods by its name,
 	// the Action name plus the HTTP MEthod
 	// Like: GETLogin our POST (for main methodos)
-	Handlers map[string]*handler
+	handlers map[string]*handler
 
 	// map[Name]*Route
-	Children map[string]*Route
+	children map[string]*Route
 
 	// True if the resource is an Slice of Resources
 	IsSlice bool
 }
 
+// Creates a new Resource tree based on given Struct
+// Receives the Struct to be mapped in a new Resource Tree,
+// it also receive the Field name and Field tag as optional arguments
+func NewRoute(object interface{}, args ...string) (*Route, error) {
+
+	value := reflect.ValueOf(object)
+
+	name := value.Type().Name()
+	tag := ""
+
+	// Defining a name as an opitional secound argument
+	if len(args) >= 1 {
+		name = args[0]
+	}
+
+	// Defining a tag as an opitional thrid argument
+	if len(args) >= 2 {
+		tag = args[1]
+	}
+
+	field := reflect.StructField{
+		Name:      name,
+		Tag:       reflect.StructTag(tag),
+		Anonymous: false,
+	}
+
+	r, err := newResource(value, field, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return newRoute(r)
+}
+
 // Receives the Root Resource and interate recursively
 // creating the Route tree
-func NewRoute(r *Resource) (*Route, error) {
+func newRoute(r *resource) (*Route, error) {
 
 	//log.Printf("Building Routes for %s\n", r)
 
@@ -42,8 +87,8 @@ func NewRoute(r *Resource) (*Route, error) {
 		Name:     r.Name,
 		Value:    r.Value,
 		Elem:     nil,
-		Handlers: make(map[string]*handler),
-		Children: make(map[string]*Route),
+		handlers: make(map[string]*handler),
+		children: make(map[string]*Route),
 		IsSlice:  r.IsSlice,
 	}
 
@@ -64,7 +109,7 @@ func NewRoute(r *Resource) (*Route, error) {
 	// If this Route is for an Slice
 	// Map the Route for this Elem
 	if r.IsSlice {
-		ro.Elem, err = NewRoute(r.Elem)
+		ro.Elem, err = newRoute(r.Elem)
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +117,7 @@ func NewRoute(r *Resource) (*Route, error) {
 
 	// Creating routes recursivelly for each resource child
 	for _, child := range r.Children {
-		c, err := NewRoute(child)
+		c, err := newRoute(child)
 		if err != nil {
 			return nil, err
 		}
@@ -93,7 +138,7 @@ func NewRoute(r *Resource) (*Route, error) {
 // We need to scan the methods of the Ptr to the Struct,
 // cause some methods could be attached to the pointer,
 // like func (r *Resource) GET() {}
-func (ro *Route) scanRoutesFrom(r *Resource) error {
+func (ro *Route) scanRoutesFrom(r *resource) error {
 
 	err := ro.scanMethods(r)
 	if err != nil {
@@ -113,7 +158,7 @@ func (ro *Route) scanRoutesFrom(r *Resource) error {
 
 // Scan the methods from one Type and add it to the Route
 // This type could be []*Resource or just *Resource
-func (ro *Route) scanMethods(r *Resource) error {
+func (ro *Route) scanMethods(r *resource) error {
 
 	t := r.Value.Type()
 
@@ -145,7 +190,7 @@ func (ro *Route) scanMethods(r *Resource) error {
 			}
 
 			// Index: GETLogin, POST, or POSTMessage...
-			ro.Handlers[h.Method.HTTPMethod+h.Method.Name] = h
+			ro.handlers[h.Method.HTTPMethod+h.Method.Name] = h
 		}
 	}
 
@@ -155,7 +200,7 @@ func (ro *Route) scanMethods(r *Resource) error {
 // Return false if this Route have no methods declared
 func (ro *Route) hasHandler() bool {
 
-	if len(ro.Handlers) > 0 {
+	if len(ro.handlers) > 0 {
 		return true
 	}
 
@@ -163,7 +208,7 @@ func (ro *Route) hasHandler() bool {
 		return ro.Elem.hasHandler()
 	}
 
-	for _, child := range ro.Children {
+	for _, child := range ro.children {
 		if child.hasHandler() {
 			return true
 		}
@@ -180,21 +225,21 @@ func (ro *Route) AddChild(child *Route) error {
 	if child.hasHandler() {
 
 		// Test if this Name wasn't in use yet by one child
-		_, exist := ro.Children[child.Name]
+		_, exist := ro.children[child.Name]
 		if exist {
 			return errors.New("Route " + ro.Name + " already has child " + child.Name)
 		}
 
 		// Test if this Name isn't used by one Handler
 		// Remember for Action Handlers
-		for _, h := range ro.Handlers {
+		for _, h := range ro.handlers {
 			//log.Printf("TESTING %s WITH %s\n", child, h)
 			if child.Name == h.Method.Name {
 				return fmt.Errorf("%s children of %s conflicts with %s", child, ro, h)
 			}
 		}
 
-		ro.Children[child.Name] = child
+		ro.children[child.Name] = child
 
 		//log.Printf("Child name %s added %s\n", child.Name, child)
 	}
@@ -205,22 +250,18 @@ func (ro *Route) AddChild(child *Route) error {
 // Action Handlers Names could conflict with Children Names...
 func (ro *Route) checkAddrConflict(h *handler) error {
 
-	for name, child := range ro.Children {
+	for name, child := range ro.children {
 		if name == h.Method.Name {
 			return fmt.Errorf("%s children of %s conflicts with %s", child, ro, h)
 		}
 	}
 
-	_, exist := ro.Handlers[h.Method.HTTPMethod+h.Method.Name]
+	_, exist := ro.handlers[h.Method.HTTPMethod+h.Method.Name]
 	if exist {
 		return fmt.Errorf("%s already has handler %s", ro, h)
 	}
 
 	return nil
-}
-
-func (ro *Route) String() string {
-	return fmt.Sprintf("Route: [%s] %s", ro.Name, ro.Value.Type())
 }
 
 // Return the Route from the especified Name
@@ -231,7 +272,7 @@ func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, 
 
 	// Check if is trying to request some Handler of this Route
 	if len(uri) == 0 {
-		h, exist := ro.Handlers[httpMethod]
+		h, exist := ro.handlers[httpMethod]
 		if !exist {
 			return nil, fmt.Errorf("Method %s not found in the %s", httpMethod, ro)
 		}
@@ -241,7 +282,7 @@ func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, 
 	// Check if is trying to request some Action Handler of this Route
 	if len(uri) == 1 {
 
-		h, exist := ro.Handlers[httpMethod+uri[0]]
+		h, exist := ro.handlers[httpMethod+uri[0]]
 		if exist {
 			return h, nil
 		}
@@ -260,7 +301,7 @@ func (ro *Route) handler(uri []string, httpMethod string, ids idMap) (*handler, 
 	}
 
 	// If we are in an Elem Route, the only possibility is to have a Child with this Name
-	child, exist := ro.Children[uri[0]]
+	child, exist := ro.children[uri[0]]
 	if exist {
 		return child.handler(uri[1:], httpMethod, ids)
 	}
@@ -367,4 +408,32 @@ func writeError(w http.ResponseWriter, err error, status int) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResponse)
+}
+
+func (ro *Route) String() string {
+	str := fmt.Sprintf("Route: [%s] %s:", ro.Name, ro.Value.Type())
+	for _, h := range ro.handlers {
+		str += fmt.Sprintf(" ([%s] /%s)", h.Method.HTTPMethod, h.Method.Name)
+	}
+	return str
+}
+
+func (ro *Route) Children() []Router {
+	children := make([]Router, len(ro.children))
+	i := 0
+	for _, c := range ro.children {
+		children[i] = c
+		i += 1
+	}
+	return children
+}
+
+func (ro *Route) Handlers() []Handler {
+	handlers := make([]Handler, len(ro.handlers))
+	i := 0
+	for _, h := range ro.handlers {
+		handlers[i] = h
+		i += 1
+	}
+	return handlers
 }

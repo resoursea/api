@@ -21,7 +21,7 @@ func checkCircularDependency(ro *Route) error {
 }
 
 func (cd *circularDependency) checkRoute(ro *Route) error {
-	for _, h := range ro.Handlers {
+	for _, h := range ro.handlers {
 		//log.Println("Check CD for Method", h.Method)
 		for _, d := range h.Dependencies {
 			err := cd.checkDependency(d, h)
@@ -31,7 +31,7 @@ func (cd *circularDependency) checkRoute(ro *Route) error {
 		}
 	}
 
-	for _, child := range ro.Children {
+	for _, child := range ro.children {
 		err := cd.checkRoute(child)
 		if err != nil {
 			return err

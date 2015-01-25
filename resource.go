@@ -7,49 +7,20 @@ import (
 )
 
 // We are storing the Pointer to Struct value and Pointer to Slice as Value
-type Resource struct {
+type resource struct {
 	Name      string
 	Value     reflect.Value
-	Parent    *Resource
-	Elem      *Resource // If it is an Slice Resource, it points to the Elem Resource
-	Children  []*Resource
-	Extends   []*Resource // Spot for Anonymous fields
+	Parent    *resource
+	Elem      *resource // If it is an Slice Resource, it points to the Elem Resource
+	Children  []*resource
+	Extends   []*resource // Spot for Anonymous fields
 	Anonymous bool        // Is Anonymous field?
 	Tag       reflect.StructTag
 	IsSlice   bool
 }
 
-// Creates a new Resource tree based on given Struct
-// Receives the Struct to be mapped in a new Resource Tree,
-// it also receive the Field name and Field tag as optional arguments
-func NewResource(object interface{}, args ...string) (*Resource, error) {
-
-	value := reflect.ValueOf(object)
-
-	name := value.Type().Name()
-	tag := ""
-
-	// Defining a name as an opitional secound argument
-	if len(args) >= 1 {
-		name = args[0]
-	}
-
-	// Defining a tag as an opitional thrid argument
-	if len(args) >= 2 {
-		tag = args[1]
-	}
-
-	field := reflect.StructField{
-		Name:      name,
-		Tag:       reflect.StructTag(tag),
-		Anonymous: false,
-	}
-
-	return newResource(value, field, nil)
-}
-
 // Create a new Resource tree based on given Struct, its Struct Field and its Resource parent
-func newResource(value reflect.Value, field reflect.StructField, parent *Resource) (*Resource, error) {
+func newResource(value reflect.Value, field reflect.StructField, parent *resource) (*resource, error) {
 	// Check if the value is valid, valid values are:
 	// struct, *struct, []struct, *[]struct, *[]*struct
 	if !isValidValue(value) {
@@ -61,38 +32,37 @@ func newResource(value reflect.Value, field reflect.StructField, parent *Resourc
 
 	//log.Println("Scanning Struct:", value.Type(), "name:", strings.ToLower(field.Name), value.Interface())
 
-	resource := &Resource{
+	r := &resource{
 		Name:      strings.ToLower(field.Name),
 		Value:     value,
 		Parent:    parent,
-		Children:  []*Resource{},
-		Extends:   []*Resource{},
+		Children:  []*resource{},
+		Extends:   []*resource{},
 		Anonymous: field.Anonymous,
 		Tag:       field.Tag,
 		IsSlice:   isSliceType(value.Type()),
 	}
 
 	// Check for circular dependency !!!
-	exist, p := resource.existParentOfType(resource)
+	exist, p := r.existParentOfType(r)
 	if exist {
-		//printResourceStack(resource, resource)
 		return nil, fmt.Errorf("The resource %s as '%s' have an circular dependency in %s as '%s'",
-			resource.Value.Type(), resource.Name, p.Value.Type(), p.Name)
+			r.Value.Type(), r.Name, p.Value.Type(), p.Name)
 	}
 
 	// If it is slice, scan the Elem of this slice
-	if resource.IsSlice {
+	if r.IsSlice {
 
 		elemValue := elemOfSliceValue(value)
 
-		elem, err := newResource(elemValue, field, resource)
+		elem, err := newResource(elemValue, field, r)
 		if err != nil {
 			return nil, err
 		}
 
-		resource.Elem = elem
+		r.Elem = elem
 
-		return resource, nil
+		return r, nil
 	}
 
 	for i := 0; i < value.Elem().Type().NumField(); i++ {
@@ -105,24 +75,24 @@ func newResource(value reflect.Value, field reflect.StructField, parent *Resourc
 		// Check if this field is exported: fieldValue.CanInterface()
 		// and if this field is valid fo create Resources: Structs or Slices of Structs
 		if isValidValue(fieldValue) {
-			child, err := newResource(fieldValue, field, resource)
+			child, err := newResource(fieldValue, field, r)
 			if err != nil {
 				return nil, err
 			}
-			err = resource.addChild(child)
+			err = r.addChild(child)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	return resource, nil
+	return r, nil
 }
 
 // The child should be added to the first non anonymous parent
 // An anonymous field indicates that the containing non anonymous parent Struct
 // should have all the fields and methos this anonymous field has
-func (parent *Resource) addChild(child *Resource) error {
+func (parent *resource) addChild(child *resource) error {
 	//log.Printf("%s Anonymous: %v adding Child %s",
 	//	parent.Value.Type(), parent.Anonymous, child.Value.Type())
 
@@ -155,7 +125,7 @@ func (parent *Resource) addChild(child *Resource) error {
 // should be present in this Resource children or in its parents children recursively
 // If requested type is an Struct return the initial Value of this Type, if exists,
 // if Struct type not contained on the resource tree, create a new empty Value for this Type
-func (r *Resource) valueOf(t reflect.Type) (reflect.Value, error) {
+func (r *resource) valueOf(t reflect.Type) (reflect.Value, error) {
 
 	for _, child := range r.Children {
 		if child.isType(t) {
@@ -202,7 +172,7 @@ func (r *Resource) valueOf(t reflect.Type) (reflect.Value, error) {
 }
 
 // Return true if this Resrouce is from by this Type
-func (r *Resource) isType(t reflect.Type) bool {
+func (r *resource) isType(t reflect.Type) bool {
 
 	if t.Kind() == reflect.Interface {
 		if r.Value.Type().Implements(t) {
@@ -221,17 +191,17 @@ func (r *Resource) isType(t reflect.Type) bool {
 
 // Return true any of its father have the same type of this resrouce
 // This method prevents for Circular Dependency
-func (r *Resource) existParentOfType(resource *Resource) (bool, *Resource) {
+func (r *resource) existParentOfType(re *resource) (bool, *resource) {
 	if r.Parent != nil {
-		if r.Parent.Value.Type() == resource.Value.Type() {
+		if r.Parent.Value.Type() == re.Value.Type() {
 			return true, r.Parent
 		}
-		return r.Parent.existParentOfType(resource)
+		return r.Parent.existParentOfType(re)
 	}
 	return false, nil
 }
 
-func (r *Resource) String() string {
+func (r *resource) String() string {
 
 	name := "[" + r.Name + "] "
 

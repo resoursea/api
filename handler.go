@@ -13,7 +13,7 @@ type handler struct {
 	Dependencies dependencies
 }
 
-func newHandler(m reflect.Method, r *Resource) (*handler, error) {
+func newHandler(m reflect.Method, r *resource) (*handler, error) {
 
 	//log.Println("Creating Handler for method", m.Name, m.Type)
 
@@ -39,7 +39,7 @@ func newHandler(m reflect.Method, r *Resource) (*handler, error) {
 // Scan the dependencies recursively and add it to the Handler dependencies list
 // This method ensures that all dependencies will be present
 // when the dependents methods want them
-func (h *handler) newDependency(t reflect.Type, r *Resource) error {
+func (h *handler) newDependency(t reflect.Type, r *resource) error {
 
 	//log.Println("Trying to create a new dependency", t)
 
@@ -90,7 +90,7 @@ func (h *handler) newDependency(t reflect.Type, r *Resource) error {
 }
 
 // Scan the dependencies of the Init method of some type
-func (h *handler) newInitMethod(d *dependency, r *Resource) error {
+func (h *handler) newInitMethod(d *dependency, r *resource) error {
 
 	m, exists := d.Value.Type().MethodByName("Init")
 	if !exists {
