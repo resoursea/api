@@ -12,17 +12,21 @@ func PrintRouter(rt Router) {
 }
 
 func printRouter(r Router, lvl int) {
-	fmt.Printf("%s%s\n", strings.Repeat("	", lvl), r.String())
+	fmt.Printf("%sRoute: %s\n", strings.Repeat("	", lvl), r)
 
-	for _, h := range r.Handlers() {
-		printHandler(h, lvl)
+	for _, m := range r.Methods() {
+		printHandler(m, lvl)
 	}
 
 	for _, c := range r.Children() {
-		printRouter(c, lvl+1)
+		if r.IsSlice() {
+			printRouter(c, lvl)
+		} else {
+			printRouter(c, lvl+1)
+		}
 	}
 }
 
-func printHandler(h Handler, lvl int) {
-	fmt.Printf("%s- %s\n", strings.Repeat("	", lvl), h.String())
+func printHandler(m Method, lvl int) {
+	fmt.Printf("%s- Method: %s\n", strings.Repeat("	", lvl), m)
 }

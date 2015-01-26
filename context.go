@@ -7,19 +7,19 @@ import (
 )
 
 type context struct {
-	Handler *handler
-	Values  []reflect.Value
-	IDMap   idMap
-	Errors  []reflect.Value // To append the errors outputed
+	method *method
+	Values []reflect.Value
+	IDMap  idMap
+	Errors []reflect.Value // To append the errors outputed
 }
 
 // Creates a new context
 // It creates the initial state used to answer the request
 // Since states are not allowed to be stored on te server,
 // this initial state is all the service has to answer a request
-func newContext(handler *handler, w http.ResponseWriter, req *http.Request, ids idMap) *context {
+func newContext(m *method, w http.ResponseWriter, req *http.Request, ids idMap) *context {
 	return &context{
-		Handler: handler,
+		method: m,
 		Values: []reflect.Value{
 			reflect.ValueOf(w),
 			reflect.ValueOf(req),
@@ -31,27 +31,25 @@ func newContext(handler *handler, w http.ResponseWriter, req *http.Request, ids 
 
 func (c *context) run() []reflect.Value {
 
-	//log.Println("Running Context Handler Method:", c.Handler.Method.Method.Type)
+	//log.Println("Running Context method Method:", c.method.Method.Method.Type)
 
 	// Then run the main method
-	inputs := c.getInputs(c.Handler.Method)
+	inputs := c.getInputs(&c.method.Method)
 
-	return c.Handler.Method.Method.Func.Call(inputs)
+	return c.method.Method.Func.Call(inputs)
 }
 
 // Return the inputs Values from a Method
 // For the especial case of the ID input, we should know the requester Type
-func (c *context) getInputs(m *method) []reflect.Value {
+func (c *context) getInputs(m *reflect.Method) []reflect.Value {
 
-	inputs := m.Inputs
+	requester := m.Type.In(0) // Get the requester Type
 
-	requester := m.Owner // Get the requester Type
-
-	values := make([]reflect.Value, len(inputs))
+	values := make([]reflect.Value, m.Type.NumIn())
 
 	//log.Println("Getting inputs:", inputs)
-
-	for i, t := range inputs {
+	for i := 0; i < m.Type.NumIn(); i++ {
+		t := m.Type.In(i)
 
 		//log.Println("Getting input", t)
 		values[i] = c.valueOf(t, requester)
@@ -161,7 +159,7 @@ func (c *context) idValue(t reflect.Type) reflect.Value {
 // Garants that every dependencie exists before be requisited
 func (c *context) initDependencie(t reflect.Type) reflect.Value {
 
-	dependencie, exist := c.Handler.Dependencies[t]
+	dependencie, exist := c.method.Dependencies[t]
 	if !exist { // It should never occours
 		log.Panicf("Dependencie %s not mapped!!!", t)
 	}
@@ -174,26 +172,28 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 	// Instanciate a new dependency and add it to the list
 	c.Values = append(c.Values, dependencie.init())
 
-	if dependencie.Method != nil {
+	if dependencie.Init != nil {
 
-		inputs := c.getInputs(dependencie.Method) //dependencie.Input, dependencie.Value.Type())
+		inputs := c.getInputs(dependencie.Init) //dependencie.Input, dependencie.Value.Type())
 
-		out := make([]reflect.Value, dependencie.Method.Method.Type.NumOut())
+		out := make([]reflect.Value, dependencie.Init.Type.NumOut())
 
 		//log.Printf("Calling %s with %q \n", dependencie.Method.Method.Type, inputs)
 
-		out = dependencie.Method.Method.Func.Call(inputs)
+		out = dependencie.Init.Func.Call(inputs)
 
 		// If the Init method return something,
 		// it will be the resource itself with
 		// its values updated
-		if dependencie.Method.NumOut > 0 {
+		if dependencie.Init.Type.NumOut() > 0 {
 
-			for i := 0; i < dependencie.Method.NumOut; i++ {
+			for i := 0; i < dependencie.Init.Type.NumOut(); i++ {
+
+				out[i].Type()
 
 				//log.Println("### Threating output:", dependencie.Method.Outputs[i])
 
-				if dependencie.Method.Outputs[i] == errorType {
+				if out[i].Type() == errorType {
 					//log.Println("### Fucking shit error!!!!", out[i].IsNil(), out[i].IsValid(), out[i].CanSet(), out[i].CanInterface())
 					if !out[i].IsNil() {
 						c.Errors = append(c.Errors, out[i])
@@ -202,12 +202,12 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 					continue
 				}
 				// Check if this output is the dependency itself
-				if dependencie.isType(dependencie.Method.Outputs[i]) {
+				if dependencie.isType(out[i].Type()) {
 					//log.Println("### Its just me...", out[i].Type(), out[i].IsValid(), out[i].CanSet(), out[i].CanInterface(), out[i].Type())
 
 					// If this method outputs an Elem insted an Ptr to the Elem
-					if dependencie.Method.Outputs[i].Kind() != reflect.Ptr {
-						value := reflect.New(dependencie.Method.Outputs[i])
+					if out[i].Type().Kind() != reflect.Ptr {
+						value := reflect.New(out[i].Type())
 						value.Elem().Set(out[i])
 						c.Values[index] = value
 					} else {

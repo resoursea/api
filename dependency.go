@@ -1,7 +1,6 @@
 package api
 
 import (
-	"log"
 	"reflect"
 )
 
@@ -11,15 +10,16 @@ type dependency struct {
 	Value reflect.Value
 
 	// Init method and its input
-	Method *method
+	Init *reflect.Method
 }
 
 type dependencies map[reflect.Type]*dependency
 
 // Create a new Dependencies map
 func newDependencies(m reflect.Method, r *resource) (dependencies, error) {
+	//log.Println("Creating dependencies for method", m.Type)
 	ds := dependencies{} //make(map[reflect.Type]*dependency)
-	err := ds.scanDependencies(m, r)
+	err := ds.scanMethodInputs(m, r)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +27,8 @@ func newDependencies(m reflect.Method, r *resource) (dependencies, error) {
 }
 
 // Scan the dependencies of a Method
-func (ds dependencies) scanDependencies(m reflect.Method, r *resource) error {
-	log.Println("Trying to scan method", m.Type, ds == nil)
+func (ds dependencies) scanMethodInputs(m reflect.Method, r *resource) error {
+	//log.Println("Trying to scan method", m.Type)
 	// So we scan all dependencies to create a tree
 
 	for i := 0; i < m.Type.NumIn(); i++ {
@@ -37,8 +37,7 @@ func (ds dependencies) scanDependencies(m reflect.Method, r *resource) error {
 		// Check if this type already exists in the dependencies
 		// If it was indexed by another type, this method
 		// ensures that it will be indexed for this type too
-		_, exist := ds.vaueOf(input)
-		if exist {
+		if ds.exists(input) {
 			//log.Printf("Found dependency %s to use as %s\n", dp.Value, t)
 			continue
 		}
@@ -79,18 +78,18 @@ func (ds dependencies) scanDependencies(m reflect.Method, r *resource) error {
 
 		//log.Println("Scan Dependencies for Init method", d.Method.Method.Type)
 
-		err = ds.scanDependencies(init, r)
+		err = ds.scanMethodInputs(init, r)
 		if err != nil {
 			return err
 		}
 
 		// And attach it into the Dependency Method
-		d.Method = newMethod(init)
+		d.Init = &init
 	}
 	return nil
 }
 
-// Scan the dependencies recursively and add it to the Handler dependencies list
+// Scan the dependencies recursively and add it to the Method dependencies list
 // This method ensures that all dependencies will be present
 // when the dependents methods want them
 func newDependency(t reflect.Type, r *resource) (*dependency, error) {
@@ -112,8 +111,8 @@ func newDependency(t reflect.Type, r *resource) (*dependency, error) {
 	}
 
 	d := &dependency{
-		Value:  v,
-		Method: nil,
+		Value: v,
+		Init:  nil,
 	}
 
 	//log.Printf("Created dependency %s to use as %s\n", v, t)
@@ -123,7 +122,7 @@ func newDependency(t reflect.Type, r *resource) (*dependency, error) {
 
 // Add a new dependency to the Dependencies list
 func (ds dependencies) add(d *dependency) {
-	log.Println("Adding dependency", d.Value.Type(), ds == nil)
+	//log.Println("Adding dependency", d.Value.Type())
 	ds[d.Value.Type()] = d
 }
 
@@ -155,6 +154,15 @@ func (ds dependencies) vaueOf(t reflect.Type) (*dependency, bool) {
 
 	// Not found
 	return nil, false
+}
+
+// Return true if required type already exists in the Dependencies map
+// Check if this type already exists in the dependencies
+// If it was indexed by another type, this method
+// ensures that it will be indexed for this type too
+func (ds dependencies) exists(t reflect.Type) bool {
+	_, exist := ds.vaueOf(t)
+	return exist
 }
 
 // Return true if this Resrouce is from by this Type

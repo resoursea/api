@@ -8,10 +8,18 @@ import (
 	"strings"
 )
 
+var httpMethods = [...]string{
+	"GET",
+	"PUT",
+	"POST",
+	"DELETE",
+	"HEAD",
+}
+
 // Constants to test type equality
 var (
 	responseWriterPtrType = reflect.TypeOf((*http.ResponseWriter)(nil))
-	tesponseWriterType    = responseWriterPtrType.Elem()
+	responseWriterType    = responseWriterPtrType.Elem()
 	requestPtrType        = reflect.TypeOf((*http.Request)(nil))
 	requestType           = requestPtrType.Elem()
 	errorSliceType        = reflect.TypeOf(([]error)(nil))
@@ -26,7 +34,7 @@ var (
 func isContextType(resourceType reflect.Type) bool {
 	// Test if user used *http.ResponseWriter insted of http.ResponseWriter
 	if resourceType.AssignableTo(responseWriterPtrType) {
-		log.Fatalf("You asked for %s when you should used %s", resourceType, tesponseWriterType)
+		log.Fatalf("You asked for %s when you should used %s", resourceType, responseWriterType)
 	}
 	// Test if user used http.Request insted of *http.Request
 	if resourceType.AssignableTo(requestType) {
@@ -37,7 +45,7 @@ func isContextType(resourceType reflect.Type) bool {
 		log.Fatalf("You asked for %s when you should used %s", idType, idPtrType)
 	}
 
-	return resourceType.AssignableTo(tesponseWriterType) ||
+	return resourceType.AssignableTo(responseWriterType) ||
 		resourceType.AssignableTo(requestPtrType) ||
 		resourceType.AssignableTo(errorType) ||
 		resourceType.AssignableTo(errorSliceType) ||
@@ -215,4 +223,17 @@ func newEmptyValue(t reflect.Type) (reflect.Value, error) {
 		return reflect.New(t), nil // A new Ptr to Struct of this type
 	}
 	return reflect.Value{}, fmt.Errorf("Can't create an empty Value for type  %s", t)
+}
+
+// Return if this method should be mapped or not
+// Methods starting with GET, POST, PUT, DELETE or HEAD should be mapped
+func isMappedMethod(m reflect.Method) bool {
+
+	for _, httpMethod := range httpMethods {
+		if strings.HasPrefix(m.Name, httpMethod) {
+			return true
+		}
+	}
+
+	return false
 }

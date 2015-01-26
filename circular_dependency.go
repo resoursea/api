@@ -12,7 +12,7 @@ type circularDependency struct {
 }
 
 // Check the existence of Circular Dependency on the route
-func checkCircularDependency(ro *Route) error {
+func checkCircularDependency(ro *route) error {
 	cd := &circularDependency{
 		Checked:    []*dependency{},
 		Dependents: []reflect.Type{},
@@ -20,11 +20,11 @@ func checkCircularDependency(ro *Route) error {
 	return cd.checkRoute(ro)
 }
 
-func (cd *circularDependency) checkRoute(ro *Route) error {
-	for _, h := range ro.handlers {
-		//log.Println("Check CD for Method", h.Method)
-		for _, d := range h.Dependencies {
-			err := cd.checkDependency(d, h)
+func (cd *circularDependency) checkRoute(ro *route) error {
+	for _, m := range ro.methods {
+		//log.Println("Check CD for Method", m.Method)
+		for _, d := range m.Dependencies {
+			err := cd.checkDependency(d, m)
 			if err != nil {
 				return err
 			}
@@ -44,7 +44,7 @@ func (cd *circularDependency) checkRoute(ro *Route) error {
 // This method add de Dependency to the Dependents list testing if it conflicts
 // and moves recursively on each Dependency of this Dependency...
 // at the end of the method the Dependency is removed from the Dependents list
-func (cd *circularDependency) checkDependency(d *dependency, h *handler) error {
+func (cd *circularDependency) checkDependency(d *dependency, m *method) error {
 	// If this Dependency is already checked,
 	// we don't need to check it again
 	if cd.isChecked(d) {
@@ -61,8 +61,10 @@ func (cd *circularDependency) checkDependency(d *dependency, h *handler) error {
 	}
 
 	// Check if this Dependency has Init Method
-	if d.Method != nil {
-		for _, t := range d.Method.Inputs {
+	if d.Init != nil {
+		for i := 0; i < d.Init.Type.NumIn(); i++ {
+
+			t := d.Init.Type.In(i)
 			//log.Println("CD for Dependency Init Dependency", i, t, dependency.isType(t))
 
 			// The first element will always be the dependency itself
@@ -76,13 +78,13 @@ func (cd *circularDependency) checkDependency(d *dependency, h *handler) error {
 				continue
 			}
 
-			d, exist := h.Dependencies.vaueOf(t)
+			d, exist := m.Dependencies.vaueOf(t)
 			if !exist { // It should never occurs!
 				return fmt.Errorf("Danger! No dependency %s found! Something very wrong happened!", t)
 			}
 
 			// Go ahead recursively on each Dependency
-			err := cd.checkDependency(d, h)
+			err := cd.checkDependency(d, m)
 			if err != nil {
 				return err
 			}

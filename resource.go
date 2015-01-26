@@ -11,12 +11,11 @@ type resource struct {
 	Name      string
 	Value     reflect.Value
 	Parent    *resource
-	Elem      *resource // If it is an Slice Resource, it points to the Elem Resource
 	Children  []*resource
 	Extends   []*resource // Spot for Anonymous fields
 	Anonymous bool        // Is Anonymous field?
 	Tag       reflect.StructTag
-	IsSlice   bool
+	isSlice   bool
 }
 
 // Create a new Resource tree based on given Struct, its Struct Field and its Resource parent
@@ -40,7 +39,7 @@ func newResource(value reflect.Value, field reflect.StructField, parent *resourc
 		Extends:   []*resource{},
 		Anonymous: field.Anonymous,
 		Tag:       field.Tag,
-		IsSlice:   isSliceType(value.Type()),
+		isSlice:   isSliceType(value.Type()),
 	}
 
 	// Check for circular dependency !!!
@@ -51,7 +50,7 @@ func newResource(value reflect.Value, field reflect.StructField, parent *resourc
 	}
 
 	// If it is slice, scan the Elem of this slice
-	if r.IsSlice {
+	if r.isSlice {
 
 		elemValue := elemOfSliceValue(value)
 
@@ -60,7 +59,8 @@ func newResource(value reflect.Value, field reflect.StructField, parent *resourc
 			return nil, err
 		}
 
-		r.Elem = elem
+		//r.Elem = elem
+		r.addChild(elem)
 
 		return r, nil
 	}
@@ -130,18 +130,6 @@ func (r *resource) valueOf(t reflect.Type) (reflect.Value, error) {
 	for _, child := range r.Children {
 		if child.isType(t) {
 			return child.Value, nil
-		}
-	}
-
-	// For Types contained in a Slice
-	if r.IsSlice {
-		if r.Elem.isType(t) {
-			return r.Elem.Value, nil
-		}
-		for _, child := range r.Elem.Children {
-			if child.isType(t) {
-				return child.Value, nil
-			}
 		}
 	}
 

@@ -9,9 +9,7 @@ import (
 )
 
 type API struct {
-	a  A
-	A  A
-	A2 *A
+	A A
 }
 
 //
@@ -22,7 +20,7 @@ func TestResource(t *testing.T) {
 		A: A{
 			Name: "Testing",
 			//X:    X{Test: "Tested"},
-			Bs: &BList{B{Name: "Started"}},
+			//Bs: &BList{B{Name: "Started"}},
 			//B: &B{Name: "Setted"},
 		},
 	}
@@ -35,7 +33,7 @@ func TestResource(t *testing.T) {
 	PrintRouter(rt)
 
 	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/a/bs/123", nil)
+	req, _ := http.NewRequest("GET", "/api/a", nil)
 
 	rt.ServeHTTP(res, req)
 
@@ -52,7 +50,7 @@ func TestResource(t *testing.T) {
 type A struct {
 	Id   string
 	Name string
-	Bs   *BList "Tag de Bs"
+	//Bs   *BList "Tag de Bs"
 	//X
 	//C C // conflit, name 'c' already used
 }
@@ -61,7 +59,7 @@ func (a A) Init(ss A) *A {
 	return &a
 }
 
-func (a *A) GET(b B, err error) *A {
+func (a *A) GET(w http.ResponseWriter, req *http.Request, err error) *A {
 	log.Println("GET A received", err)
 	return a
 }
