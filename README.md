@@ -15,21 +15,7 @@ Then install the Resoursea package:
 go get github.com/resoursea/api
 ~~~
 
-Now you can create your first resource file description. We'll call it `resource.go`.
-
-~~~ go
-package main
-
-type Resource struct {
-	Message string
-}
-
-func (r *Resource) GET() *Resource {
-	return r
-}
-~~~
-
-So you just need to create the service that will provide your resource on the network. Name it `main.go`.
+Create a new Resource and call the `api` to route the Resource for you. Now you can call the standard Go server to provide the resource on the network. Create a file as shown below and save as `main.go`.
 
 ~~~ go
 package main
@@ -41,23 +27,22 @@ import (
 	"github.com/resoursea/api"
 )
 
-var route *api.Route
+type Resource struct {
+	Message string
+}
 
-func init() {
-	resource, err := api.NewResource(Resource{
-		Message: "Hello World!",
+func (r *Resource) GET() *Resource {
+	return r
+}
+
+func main() {
+	route, err := api.NewRoute(Resource{
+		Message: "Hello world!",
 	})
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	route, err = api.NewRoute(resource)
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
-
-func main() {
 	// Starting de HTTP server
 	log.Println("Starting the service on http://localhost:8080/")
 	if err := http.ListenAndServe(":8080", route); err != nil {
@@ -69,7 +54,7 @@ func main() {
 Then run your server:
 
 ~~~
-go run server.go resource.go
+go run main.go
 ~~~
 
 You will have a new REST service listening on `http://localhost:8080/`.

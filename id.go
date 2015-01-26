@@ -9,19 +9,15 @@ import (
 // Ex: resource/123/child/321
 // Resource will receive the ID 123 in its arguments,
 // ans its child will receive the ID 321 when asked for it
-type ID struct {
-	id string
+
+type ID interface {
+	String() string
+	Int() (int, error)
 }
 
-type idMap map[reflect.Type]reflect.Value
-
-var nilID *ID
-
-var nilIDValue = reflect.ValueOf(nilID)
-
-var idPtrType = reflect.TypeOf(nilID)
-
-var idType = idPtrType.Elem()
+type id struct {
+	id string
+}
 
 func (i idMap) extend(ids idMap) {
 	for t, v := range ids {
@@ -29,10 +25,18 @@ func (i idMap) extend(ids idMap) {
 	}
 }
 
-func (id ID) String() string {
-	return id.id
+func (i id) String() string {
+	return i.id
 }
 
-func (id ID) Int() (int, error) {
-	return strconv.Atoi(id.String())
+func (i id) Int() (int, error) {
+	return strconv.Atoi(i.String())
 }
+
+type idMap map[reflect.Type]reflect.Value
+
+var nilIDValue = reflect.ValueOf((*id)(nil))
+
+// TODO, refactor this code
+// Dunno another way to do it
+var idInterfaceType = reflect.TypeOf(([]ID)(nil)).Elem()

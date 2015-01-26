@@ -7,10 +7,10 @@ import (
 type dependency struct {
 	// The initial dependency state
 	// Type Ptr to Struct, or Ptr to Slice of Struct
-	Value reflect.Value
+	value reflect.Value
 
 	// Init method and its input
-	Init *reflect.Method
+	init *reflect.Method
 }
 
 type dependencies map[reflect.Type]*dependency
@@ -61,7 +61,7 @@ func (ds dependencies) scanMethodInputs(m reflect.Method, r *resource) error {
 		ds.add(d)
 
 		// Check if Dependency constructor exists
-		init, exists := d.Value.Type().MethodByName("Init")
+		init, exists := d.value.Type().MethodByName("Init")
 		if !exists {
 			//log.Printf("Type %s doesn't have Init method\n", d.Value.Type())
 			continue
@@ -84,7 +84,7 @@ func (ds dependencies) scanMethodInputs(m reflect.Method, r *resource) error {
 		}
 
 		// And attach it into the Dependency Method
-		d.Init = &init
+		d.init = &init
 	}
 	return nil
 }
@@ -111,8 +111,8 @@ func newDependency(t reflect.Type, r *resource) (*dependency, error) {
 	}
 
 	d := &dependency{
-		Value: v,
-		Init:  nil,
+		value: v,
+		init:  nil,
 	}
 
 	//log.Printf("Created dependency %s to use as %s\n", v, t)
@@ -123,7 +123,7 @@ func newDependency(t reflect.Type, r *resource) (*dependency, error) {
 // Add a new dependency to the Dependencies list
 func (ds dependencies) add(d *dependency) {
 	//log.Println("Adding dependency", d.Value.Type())
-	ds[d.Value.Type()] = d
+	ds[d.value.Type()] = d
 }
 
 // This method checks if exist an value for the received type
@@ -169,17 +169,17 @@ func (ds dependencies) exists(t reflect.Type) bool {
 func (d *dependency) isType(t reflect.Type) bool {
 
 	if t.Kind() == reflect.Interface {
-		return d.Value.Type().Implements(t)
+		return d.value.Type().Implements(t)
 	}
 
 	// The Value stored in Dependency
 	// is from Type Ptr to Struct, or Ptr to Slice of Struct
-	return d.Value.Type() == ptrOfType(t)
+	return d.value.Type() == ptrOfType(t)
 }
 
 // Cosntruct a new dependency in a new memory space with the initial dependency value
-func (d *dependency) init() reflect.Value {
-	v := reflect.New(d.Value.Type().Elem())
-	v.Elem().Set(d.Value.Elem())
+func (d *dependency) new() reflect.Value {
+	v := reflect.New(d.value.Type().Elem())
+	v.Elem().Set(d.value.Elem())
 	return v
 }

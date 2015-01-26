@@ -8,9 +8,9 @@ import (
 
 type context struct {
 	method *method
-	Values []reflect.Value
-	IDMap  idMap
-	Errors []reflect.Value // To append the errors outputed
+	values []reflect.Value
+	idMap  idMap
+	errors []reflect.Value // To append the errors outputed
 }
 
 // Creates a new context
@@ -20,12 +20,12 @@ type context struct {
 func newContext(m *method, w http.ResponseWriter, req *http.Request, ids idMap) *context {
 	return &context{
 		method: m,
-		Values: []reflect.Value{
+		values: []reflect.Value{
 			reflect.ValueOf(w),
 			reflect.ValueOf(req),
 		},
-		IDMap:  ids,
-		Errors: []reflect.Value{},
+		idMap:  ids,
+		errors: []reflect.Value{},
 	}
 }
 
@@ -34,9 +34,9 @@ func (c *context) run() []reflect.Value {
 	//log.Println("Running Context method Method:", c.method.Method.Method.Type)
 
 	// Then run the main method
-	inputs := c.getInputs(&c.method.Method)
+	inputs := c.getInputs(&c.method.method)
 
-	return c.method.Method.Func.Call(inputs)
+	return c.method.method.Func.Call(inputs)
 }
 
 // Return the inputs Values from a Method
@@ -78,7 +78,7 @@ func (c *context) valueOf(t reflect.Type, requester reflect.Type) reflect.Value 
 	}
 
 	// If it is requesting the *ID type
-	if t == idPtrType {
+	if t == idInterfaceType {
 		return c.idValue(requester)
 	}
 
@@ -104,7 +104,7 @@ func (c *context) valueOf(t reflect.Type, requester reflect.Type) reflect.Value 
 // Get the Resource Value of the required Resource Type
 // It could be http.ResponseWriter or *http.Request too
 func (c *context) resourceValue(t reflect.Type) reflect.Value {
-	for _, v := range c.Values {
+	for _, v := range c.values {
 		switch t.Kind() {
 		case reflect.Interface:
 			if v.Type().Implements(t) {
@@ -127,16 +127,16 @@ func (c *context) resourceValue(t reflect.Type) reflect.Value {
 
 // Return the first error of the list, or an nil error
 func (c *context) errorValue() reflect.Value {
-	if len(c.Errors) > 0 {
-		return c.Errors[0]
+	if len(c.errors) > 0 {
+		return c.errors[0]
 	}
 	return errorNilValue
 }
 
 // Return a whole error list
 func (c *context) errorSliceValue() reflect.Value {
-	errs := make([]error, len(c.Errors))
-	for i, err := range c.Errors {
+	errs := make([]error, len(c.errors))
+	for i, err := range c.errors {
 		errs[i] = err.Interface().(error)
 	}
 	return reflect.ValueOf(errs)
@@ -146,7 +146,7 @@ func (c *context) errorSliceValue() reflect.Value {
 // It returns an nil *ID if ID were not passed in the URI
 func (c *context) idValue(t reflect.Type) reflect.Value {
 
-	id, exist := c.IDMap[t]
+	id, exist := c.idMap[t]
 	if exist {
 		return id // its an reflect.Value from the type of ID
 	}
@@ -159,7 +159,7 @@ func (c *context) idValue(t reflect.Type) reflect.Value {
 // Garants that every dependencie exists before be requisited
 func (c *context) initDependencie(t reflect.Type) reflect.Value {
 
-	dependencie, exist := c.method.Dependencies[t]
+	dependencie, exist := c.method.dependencies[t]
 	if !exist { // It should never occours
 		log.Panicf("Dependencie %s not mapped!!!", t)
 	}
@@ -167,27 +167,27 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 	//log.Println("Constructing dependency", dependencie.Value.Type())
 
 	// This Value will be mapped in the index index
-	index := len(c.Values)
+	index := len(c.values)
 
 	// Instanciate a new dependency and add it to the list
-	c.Values = append(c.Values, dependencie.init())
+	c.values = append(c.values, dependencie.new())
 
-	if dependencie.Init != nil {
+	if dependencie.init != nil {
 
-		inputs := c.getInputs(dependencie.Init) //dependencie.Input, dependencie.Value.Type())
+		inputs := c.getInputs(dependencie.init) //dependencie.Input, dependencie.Value.Type())
 
-		out := make([]reflect.Value, dependencie.Init.Type.NumOut())
+		out := make([]reflect.Value, dependencie.init.Type.NumOut())
 
 		//log.Printf("Calling %s with %q \n", dependencie.Method.Method.Type, inputs)
 
-		out = dependencie.Init.Func.Call(inputs)
+		out = dependencie.init.Func.Call(inputs)
 
 		// If the Init method return something,
 		// it will be the resource itself with
 		// its values updated
-		if dependencie.Init.Type.NumOut() > 0 {
+		if dependencie.init.Type.NumOut() > 0 {
 
-			for i := 0; i < dependencie.Init.Type.NumOut(); i++ {
+			for i := 0; i < dependencie.init.Type.NumOut(); i++ {
 
 				out[i].Type()
 
@@ -196,7 +196,7 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 				if out[i].Type() == errorType {
 					//log.Println("### Fucking shit error!!!!", out[i].IsNil(), out[i].IsValid(), out[i].CanSet(), out[i].CanInterface())
 					if !out[i].IsNil() {
-						c.Errors = append(c.Errors, out[i])
+						c.errors = append(c.errors, out[i])
 						//log.Println("### Appending the error!!!!")
 					}
 					continue
@@ -209,9 +209,9 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 					if out[i].Type().Kind() != reflect.Ptr {
 						value := reflect.New(out[i].Type())
 						value.Elem().Set(out[i])
-						c.Values[index] = value
+						c.values[index] = value
 					} else {
-						c.Values[index] = out[i]
+						c.values[index] = out[i]
 					}
 				}
 
@@ -221,5 +221,5 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 
 	//log.Println("Constructed", c.Values[index], "for", t, "value", c.Values[index].Interface())
 
-	return c.Values[index]
+	return c.values[index]
 }

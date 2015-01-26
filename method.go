@@ -6,12 +6,12 @@ import (
 )
 
 type method struct {
-	Method reflect.Method
+	method reflect.Method
 	// Many Types could point to the same dependencie
 	// It could occour couse could have any number of Interfaces
 	// that could be satisfied by a single dependency
-	Dependencies dependencies
-	OutName      []string
+	dependencies dependencies
+	outName      []string
 }
 
 func newMethod(m reflect.Method, r *resource) (*method, error) {
@@ -24,19 +24,19 @@ func newMethod(m reflect.Method, r *resource) (*method, error) {
 	}
 
 	h := &method{
-		Method:       m,
-		Dependencies: ds,
-		OutName:      make([]string, m.Type.NumOut()),
+		method:       m,
+		dependencies: ds,
+		outName:      make([]string, m.Type.NumOut()),
 	}
 
 	// Caching the Output Resources name
 	for i := 0; i < m.Type.NumOut(); i++ {
-		h.OutName[i] = elemOfType(m.Type.Out(i)).Name()
+		h.outName[i] = elemOfType(m.Type.Out(i)).Name()
 	}
 
 	return h, nil
 }
 
 func (h *method) String() string {
-	return fmt.Sprintf("[%s] %s", h.Method.Name, h.Method.Type)
+	return fmt.Sprintf("[%s] %s", h.method.Name, h.method.Type)
 }
