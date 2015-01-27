@@ -15,7 +15,7 @@ Install the Resoursea package:
 go get github.com/resoursea/api
 ~~~
 
-To create your service all you have to do is create ordinary Go **structs** and call the `api.newRouter` to route them for you. Then, just call the standard Go server to provide the resources on the network.
+To create your service all you have to do is create ordinary Go *structs* and call the `api.newRouter` to route them for you. Then, just call the standard Go server to provide the resources on the network.
 
 ## Hello World
 
@@ -61,19 +61,104 @@ Then run your new service:
 go run main.go
 ~~~
 
-Now you have a new REST service runnig, to *GET* your new `HelloWorld` Resource, open any browser and type `http://localhost:8080/helloworld`.
+Now you have a new REST service runnig, to **GET** your new `HelloWorld` Resource, open any browser and type `http://localhost:8080/helloworld`.
 
-## REST and Resources
+## Service Design
 
-REST is a set of architectural principles for design web services with a focus on Resources, including how they are addressed and transferred through the HTTP protocol.
+REST services should be designed as a resource hierarchy.
 
-With this tool you can focus only on resources and how it behaves,  the tool takes care of routes your resources and inject the required dependencies to process the each request.
+- Create a hierarchy of ordinary Go **structs** and that defines the structure of your API access URI and the Resources it points to.
+
+- Define HTTP methods for each Resource and these methods are automatically routed efficiently.
+
+- Define the dependencies of each method and automatically these dependencies will be cached and injected.
+
+- If you define the initial state of some Resource, it will be injected in the `Init` method to construct this dependency ever time it was requested.
+
+This way the ordinary Go **structs** are mapped as resources that together form the service to be offered by the server.
+
+* Initial state of Resources are optional, if not defined a new empty instance will be injected.
+* The constructor method `Init` is optional, if not declared the initial state, or a new empty instance, will be injected.
+* Remember that the first argument of a Go **struct** is the **struct** itself, it means that for mapped metods, like `GET`, `POST`... the instance of the resource will be always injected.
+* One of the constraints for a REST services is to don't keep states in the server component, it means that the Resources shouldn't keep states over the connection. For this rason every request will receive a new initial state of every dependency will be create, constructed and injected.
+* Just the constructor should change the state of some Resource, and it should be done just on the method owner. If you change the state of some dependency that is not the method owner, when it receives pointer value, it could cause inconsistency.
+* Constructors can have dependencies, but *you can't design a circular dependency*. The tool ensures that the dependency will be constructed before the injection itself occurs.
 
 ## The Resource Tree
 
-Resources is declared using Go structs and slices of struts.
+Resources is declared using ordinary Go **structs** and **slices** of **struts**.
 
 When declaring the service you create a tree of Resources that will be mapped in routes. The Resource name will be used as its URI. If you declare a list of Resources `type Resources []Resource` and put it in the tree, the service will behave like the imagined: Requests for the route `/resources` will be answer by the `Resources` type, and requests for the route `/resources/:ID` will be answer by the `Resource` struct, and the ID will be cautch and injected as the resource `*api.ID` whenever `Resource` requests for it.
+
+### ID
+
+The ID will be injected in every Resource if it's parent is a slice of the Resource itself. For instance:
+
+~~~ go
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/resoursea/api"
+)
+
+type Resource struct {
+	ID      int
+	Message string
+}
+
+func (r *Resource) Init(id api.ID) (*Resource, error) {
+	idInt, err := id.Int()
+	if err != nil {
+		return nil, err
+	}
+	r.ID = idInt
+	return r, nil
+}
+
+func (r *Resource) GET(err error) (*Resource, error) {
+	return r, err
+}
+
+type Resources []Resource
+
+type API struct {
+	Resources Resources
+}
+
+func main() {
+	router, err := api.NewRouter(API{
+		Resources: Resources{
+			Resource{Message: "Hello world!"},
+		},
+	})
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	// Starting de HTTP server
+	log.Println("Starting the service on http://localhost:8080/")
+	if err := http.ListenAndServe(":8080", router); err != nil {
+		log.Fatalln(err)
+	}
+}
+~~~
+
+When you run de service above and try to **GET** one specific resource, accessing `http://localhost:8080/api/resources/123` in a browser, the server will return:
+
+~~~
+{
+	"Resource": {
+		"ID": 123,
+		"Message": "Hello world!"
+	}
+}
+~~~
+
+Here we can see that the declared initial state was injected in the Resource constructor, and the `ID` sent by the URI was also injected in the constructor.
+
 
 ## The Mapped Methods
 
@@ -109,6 +194,10 @@ In Go the explicit declaration of implementation of an Interface is not required
 Think of a scenario with a list of interfaces, each with a list of resources that implements it. His work as a developer of services is choosing the interfaces and resources to attend the requirements of the service and implements only the specific features of your nincho.
 
 ## Larn More
+
+REST is a set of architectural principles for design web services with a focus on Resources, including how they are addressed and transferred through the HTTP protocol.
+
+With this tool you can focus only on resources and how it behaves,  the tool takes care of routes your resources and inject the required dependencies to process the each request.
 
 [The concept, Samples, Documentation, interfaces and resources to use...](http://resoursea.com)
 

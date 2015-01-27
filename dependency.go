@@ -135,14 +135,14 @@ func (ds dependencies) vaueOf(t reflect.Type) (*dependency, bool) {
 
 	d, exist := ds[t]
 	if exist {
-		//log.Println("Dependency: Found:", d.Value.Type())
+		//log.Println("Dependency: Found:", d.value.Type(), d.value.Interface())
 		return d, true
 	}
 
 	// Check if one of the dependencies is of this type
 	for _, d := range ds {
 		if d.isType(t) {
-			//log.Println("Dependency: Found out of index", d.Value.Type())
+			//log.Println("Dependency: Found out of index", d.value.Interface())
 
 			// Index this dependency with this new type it implements
 			ds[t] = d

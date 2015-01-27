@@ -58,7 +58,7 @@ func ptrOfValue(value reflect.Value) reflect.Value {
 	if value.Kind() == reflect.Ptr && !value.IsNil() {
 		ptr.Elem().Set(value.Elem())
 	}
-	if value.Kind() == reflect.Struct {
+	if value.Kind() == reflect.Struct || value.Kind() == reflect.Slice {
 		ptr.Elem().Set(value)
 	}
 	return ptr
