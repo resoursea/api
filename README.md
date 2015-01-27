@@ -1,7 +1,7 @@
 # Resoursea
 A high productivity web framework for quickly writing resource based services fully implementing the REST architectural style.
 
-The base for the REST are the Resources. This framework allows you to really focus on the Resources and how it behaves. And you can let the tool for routing the requests and inject the dependencies when needed.
+This framework allows you to really focus on the Resources and how it behaves, and let the tool for routing the requests and inject the required dependencies.
 
 This framework is written in [Golang](http://golang.org/) and uses the power of its implicit Interface and decentralized package manager.
 
@@ -9,13 +9,17 @@ This framework is written in [Golang](http://golang.org/) and uses the power of 
 
 First [install Go](https://golang.org/doc/install) and setting up your [GOPATH](http://golang.org/doc/code.html#GOPATH).
 
-Then install the Resoursea package:
+Install the Resoursea package:
 
 ~~~
 go get github.com/resoursea/api
 ~~~
 
-Create a new Resource and call the `api` to route the Resource for you. Now you can call the standard Go server to provide the resource on the network. Create a file as shown below and save as `main.go`.
+To create your service all you have to do is create ordinary Go **structs** and call the `api.newRouter` to route them for you. Then, just call the standard Go server to provide the resources on the network.
+
+## Hello World
+
+Save the code below in a file named `main.go`.
 
 ~~~ go
 package main
@@ -27,16 +31,16 @@ import (
 	"github.com/resoursea/api"
 )
 
-type Resource struct {
+type HelloWorld struct {
 	Message string
 }
 
-func (r *Resource) GET() *Resource {
+func (r *HelloWorld) GET() *HelloWorld {
 	return r
 }
 
 func main() {
-	route, err := api.NewRoute(Resource{
+	router, err := api.NewRouter(HelloWorld{
 		Message: "Hello world!",
 	})
 	if err != nil {
@@ -45,27 +49,25 @@ func main() {
 
 	// Starting de HTTP server
 	log.Println("Starting the service on http://localhost:8080/")
-	if err := http.ListenAndServe(":8080", route); err != nil {
+	if err := http.ListenAndServe(":8080", router); err != nil {
 		log.Fatalln(err)
 	}
 }
 ~~~
 
-Then run your server:
+Then run your new service:
 
 ~~~
 go run main.go
 ~~~
 
-You will have a new REST service listening on `http://localhost:8080/`.
-
-To GET your new Resource, open any browser and type `http://localhost:8080/resource`.
+Now you have a new REST service runnig, to *GET* your new `HelloWorld` Resource, open any browser and type `http://localhost:8080/helloworld`.
 
 ## REST and Resources
 
-REST is a set of architectural principles for design web services with a focus on Resources, including how they are addressed and transferred through the HTTP protocol for a wide range of clients written in different languages​​.
+REST is a set of architectural principles for design web services with a focus on Resources, including how they are addressed and transferred through the HTTP protocol.
 
-However, there were no current tool on the market that allows a level of abstraction that allows you to focus only on the resources, until now. With this tool you focus only on resources and how they are served and the tool takes care of routes your resources and inject the required resources to process the request.
+With this tool you can focus only on resources and how it behaves,  the tool takes care of routes your resources and inject the required dependencies to process the each request.
 
 ## The Resource Tree
 
@@ -82,7 +84,7 @@ In the REST arquitecture HTTP methods should be used explicitly in a way that's 
 - POST = Create a new Resource subordinate of the specified resource collection.
 - PUT = Update the specified Resource.
 - DELETE = Delete the specified Resource.
-- HEAD = Get meta-information about the especified Resource.
+- HEAD = Get metadata about the specified Resource.
 
 This API will scan and Route all methods declared that has some of those prefix. Methods also can be used to create the Actions some Resource can perform, you can declare it this way: `POSTLike()`. It will be mapped to the route `[POST] /resource/like`. If you declare just `POST()`, it will be mapped to the route `[POST] /resource`.
 

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -232,4 +233,17 @@ func isMappedMethod(m reflect.Method) bool {
 	}
 
 	return false
+}
+
+// Write an error and Status Code in the ResponseWriter encoded as JSON,
+func writeError(w http.ResponseWriter, err error, status int) {
+	// Encode the output in JSON
+	jsonResponse, err := json.MarshalIndent(map[string]string{"error": err.Error()}, "", "\t")
+	if err != nil {
+		http.Error(w, "{error: \"Error encoding the error message to Json: "+err.Error()+"\"}", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
 }

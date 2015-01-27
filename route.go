@@ -9,73 +9,32 @@ import (
 	"strings"
 )
 
-type Router interface {
-	String() string
-	Children() []Router
-	Methods() []Method
-	IsSlice() bool
-	ServeHTTP(http.ResponseWriter, *http.Request)
-}
-
-type Method interface {
-	String() string
-}
-
+// This struct stores a tree of routed methods
+// and implements the Router interface
+// and implements the net/http.Handler interface
 type route struct {
-	// The resource name
+	// The Route URI
+	// The name of the Resource in lowercase
 	name string
 
-	// The main type of this Route
+	// The Resource value
+	// that created this route
 	value reflect.Value
 
-	// Methods by its name,
-	// the Action name plus the HTTP MEthod
-	// Like: GETLogin our POST (for main methodos)
+	// Mapped Methods attached in this Route
+	// Indexed by the route identifier in lowercase
+	// ex: get, postlike
 	methods map[string]*method
 
-	// map[Name]*Route
+	// Children Route that builds a tree
+	// Indexed by the child name
 	children map[string]*route
 
-	// True if the resource is an Slice of Resources
+	// True if this is a Route for a set of Resources
 	isSlice bool
 }
 
-// Creates a new Resource tree based on given Struct
-// Receives the Struct to be mapped in a new Resource Tree,
-// it also receive the Field name and Field tag as optional arguments
-func NewRoute(object interface{}, args ...string) (*route, error) {
-
-	value := reflect.ValueOf(object)
-
-	name := value.Type().Name()
-	tag := ""
-
-	// Defining a name as an opitional secound argument
-	if len(args) >= 1 {
-		name = args[0]
-	}
-
-	// Defining a tag as an opitional thrid argument
-	if len(args) >= 2 {
-		tag = args[1]
-	}
-
-	field := reflect.StructField{
-		Name:      name,
-		Tag:       reflect.StructTag(tag),
-		Anonymous: false,
-	}
-
-	r, err := newResource(value, field, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return newRoute(r)
-}
-
-// Receives the Root Resource and interate recursively
-// creating the Route tree
+// It maps Resource tree and creates a new Route tree
 func newRoute(r *resource) (*route, error) {
 
 	//log.Printf("Building Routes for %s\n", r)
@@ -88,29 +47,30 @@ func newRoute(r *resource) (*route, error) {
 		isSlice:  r.isSlice,
 	}
 
-	// This Route take the methods of the main resource
-	// and all the resource it Exstends will be mapped too
+	// Maps the Resource's mapped Methods
+	// and also the Resources it extends recursively
 	err := ro.scanRoutesFrom(r)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check for Circular Dependency
-	// on the Dependencies of each method
+	// on the Dependencies of each mapped Method
 	err = checkCircularDependency(ro)
 	if err != nil {
 		return nil, err
 	}
 
-	// Creating routes recursivelly for each resource child
+	// Go down to the Resource tree
+	// and create Routes recursivelly for each Resource child
 	for _, child := range r.children {
 		c, err := newRoute(child)
 		if err != nil {
 			return nil, err
 		}
 
-		//log.Printf("Adding child %s to parent %s\n", c, r)
-
+		// Add this new routed child
+		// and ensures that there is no URI conflict
 		err = ro.AddChild(c)
 		if err != nil {
 			return nil, err
@@ -386,32 +346,7 @@ func (ro *route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	w.Write(jsonResponse)
 }
 
-func writeError(w http.ResponseWriter, err error, status int) {
-	// Encode the output in JSON
-	jsonResponse, err := json.MarshalIndent(map[string]string{"error": err.Error()}, "", "\t")
-	if err != nil {
-		http.Error(w, "{error: \"Error encoding the error message to Json: "+err.Error()+"\"}", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResponse)
-}
-
-func (ro *route) String() string {
-	return fmt.Sprintf("[%s] %s", ro.name, ro.value.Type())
-}
-
-func (ro *route) Children() []Router {
-	children := make([]Router, len(ro.children))
-	i := 0
-	for _, c := range ro.children {
-		children[i] = c
-		i += 1
-	}
-	return children
-}
-
+// Return all accessible Methods in a specific Route
 func (ro *route) Methods() []Method {
 	methods := make([]Method, len(ro.methods))
 	i := 0
@@ -422,6 +357,23 @@ func (ro *route) Methods() []Method {
 	return methods
 }
 
+// Return all children Routes of a specific Route
+func (ro *route) Children() []Router {
+	children := make([]Router, len(ro.children))
+	i := 0
+	for _, c := range ro.children {
+		children[i] = c
+		i += 1
+	}
+	return children
+}
+
+// Return true if this Route wraps a list of Resources
 func (ro *route) IsSlice() bool {
 	return ro.isSlice
+}
+
+// Return a text with the name and the type of a specific Route
+func (ro *route) String() string {
+	return fmt.Sprintf("[%s] %s", ro.name, ro.value.Type())
 }

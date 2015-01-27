@@ -25,12 +25,12 @@ func TestResource(t *testing.T) {
 		},
 	}
 
-	rt, err := NewRoute(api)
+	rt, err := NewRouter(api)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	PrintRouter(rt)
+	//printer.Router(rt)
 
 	res := httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/api/a", nil)
