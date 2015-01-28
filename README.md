@@ -72,7 +72,7 @@ go run main.go
 
 Now you have a new REST service runnig, to **GET** your new `Gopher` Resource, open any browser and type `http://localhost:8080/gopher`.
 
-Another more complete example shows how to build and testing a [simple library service](https://github.com/resoursea/example) with database access, dependency injection and the use of `ID`.
+Another more complete example shows how to build and testing a [simple library service](https://github.com/resoursea/example) with database access, dependency injection and the use of `api.ID`.
 
 ## Basis
 
