@@ -225,14 +225,32 @@ func newEmptyValue(t reflect.Type) (reflect.Value, error) {
 // Return if this method should be mapped or not
 // Methods starting with GET, POST, PUT, DELETE or HEAD should be mapped
 func isMappedMethod(m reflect.Method) bool {
-
 	for _, httpMethod := range httpMethods {
 		if strings.HasPrefix(m.Name, httpMethod) {
 			return true
 		}
 	}
-
 	return false
+}
+
+// Splits the method name and returns
+// the name of the HTTP method
+// and the address of the method
+// it is because Actions are addressable methods
+func splitsMethodName(m *method) (string, string) {
+	var httpMethod, addr string
+	for _, httpMethod = range httpMethods {
+		if strings.HasPrefix(m.method.Name, httpMethod) {
+			slice := strings.Split(m.method.Name, httpMethod)
+			if len(slice) > 1 {
+				addr = slice[1]
+			}
+			return httpMethod, strings.ToLower(addr)
+		}
+	}
+	// If cant split it, return an error
+	log.Fatalf("Can't split the method %s name", m.method.Type)
+	return httpMethod, addr
 }
 
 // Write an error and Status Code in the ResponseWriter encoded as JSON,
