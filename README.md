@@ -26,7 +26,7 @@ go get github.com/resoursea/api
 
 To create your service all you have to do is create ordinary Go *structs* and call the `api.newRouter` to route them for you. Then, just call the standard Go server to provide the resources on the network.
 
-## By example
+## By Example
 
 Save the code below in a file named `main.go`.
 
