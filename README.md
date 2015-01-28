@@ -64,7 +64,7 @@ go run main.go
 
 Now you have a new REST service runnig, to *GET* your new `HelloWorld` Resource, open any browser and type `http://localhost:8080/helloworld`.
 
-Another more complete example shows how to build and testing a (simple library service)[https://github.com/resoursea/example] with database access.
+Another more complete example shows how to build and testing a [simple library service](https://github.com/resoursea/example) with database access.
 
 ## Basis
 
