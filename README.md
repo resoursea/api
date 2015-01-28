@@ -15,7 +15,7 @@ Install the Resoursea package:
 go get github.com/resoursea/api
 ~~~
 
-To create your service all you have to do is create ordinary Go **structs** and call the `api.newRouter` to route them for you. Then, just call the standard Go server to provide the resources on the network.
+To create your service all you have to do is create ordinary Go __structs__ and call the `api.newRouter` to route them for you. Then, just call the standard Go server to provide the resources on the network.
 
 ## Hello World
 
@@ -67,7 +67,7 @@ Now you have a new REST service runnig, to **GET** your new `HelloWorld` Resourc
 
 REST services should be designed as a resource hierarchy.
 
-- Create a hierarchy of ordinary Go **structs** and it will be mapped and routed, each **struct** will turn into a Resource available in your serivce.
+- Create a hierarchy of ordinary Go __structs__ and it will be mapped and routed, each __struct__ will turn into a Resource available in your serivce.
 
 - Define HTTP methods for Resource you want to be accessible to the cliente, and these methods will be cached and routed efficiently.
 
@@ -81,13 +81,13 @@ REST services should be designed as a resource hierarchy.
 
 - The root of the Resource tree isn't attached to any field, so you can pass 2 optional parameters when creating the router: the field identifier and the field tag.
 
-This way the ordinary Go **structs** are mapped as resources that together forms the service to be offered by the server.
+This way the ordinary Go __structs__ are mapped as resources that together forms the service to be offered by the server.
 
 * Initial state of Resources are optional, if not defined a new empty instance will be injected.
 
 * The constructor method `Init` is optional, if not declared the initial state, or a new empty instance will be injected.
 
-* Remember that the first argument of a Go **struct** method is the **struct** itself, it means that for mapped methods (like `GET`, `POST`...) the instance of the resource will be always injected as the first argument.
+* Remember that the first argument of a Go __struct__ method is the __struct__ itself, it means that for mapped methods (like `GET`, `POST`...) the instance of the resource will be always injected as the first argument.
 
 * One of the constraints for a REST services is to don't keep states in the server component, it means that the Resources shouldn't keep states over the connection. For this rason every request will receive a new initial state of every dependency will be create, constructed and injected.
 
@@ -98,9 +98,9 @@ This way the ordinary Go **structs** are mapped as resources that together forms
 
 ## The Resource Tree
 
-Resources is declared using ordinary Go **structs** and **slices** of **struts**.
+Resources is declared using ordinary Go __structs__ and **slices** of **struts**.
 
-When declaring the service you create a tree of **structs** that will be mapped in routes. The Resource name will be the name of the field that receives the Resource and it is used as its URI address. If you declare a list of Resources `type Resources []Resource` and put it in the Resource tree, the service will behave like the imagined: Requests for the route `/resources` will be answer by the `Resources` type, and requests for the route `/resources/:ID` will be answer by the `Resource` struct, and the ID will be cautch and injected as the dependency `*api.ID` whenever `Resource` requests for it.
+When declaring the service you create a tree of __structs__ that will be mapped in routes. The Resource name will be the name of the field that receives the Resource and it is used as its URI address. If you declare a list of Resources `type Resources []Resource` and put it in the Resource tree, the service will behave like the imagined: Requests for the route `/resources` will be answer by the `Resources` type, and requests for the route `/resources/:ID` will be answer by the `Resource` struct, and the ID will be cautch and injected as the dependency `*api.ID` whenever `Resource` requests for it.
 
 ### ID
 
