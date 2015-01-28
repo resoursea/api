@@ -222,6 +222,10 @@ In Go the explicit declaration of implementation of an Interface is not required
 
 Think of a scenario with a list of interfaces, each with a list of Resources that implements it. His work as a developer of services is choosing the interfaces and Resources to attend the requirements of the service and implements only the specific features of your nincho.
 
+### Router Tree Printer
+
+A [printer package](https://github.com/resoursea/printer) was created just for debug reasons. If you want to see the tree of mapped routes and methods, you can do it importing the `https://github.com/resoursea/printer` package and using the method `printer.Router` passing the *Router* interface returned by a `api.newRouter` call.
+
 ## Larn More
 
 REST is a set of architectural principles for design web services with a focus on Resources, including how they are addressed and transferred through the HTTP protocol.
