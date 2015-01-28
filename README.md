@@ -1,4 +1,5 @@
 # Resoursea
+
 A high productivity web framework for quickly writing resource based services fully implementing the REST architectural style.
 
 This framework allows you to really focus on the Resources and how it behaves, and let the tool for routing the requests and inject the required dependencies.
@@ -17,7 +18,7 @@ go get github.com/resoursea/api
 
 To create your service all you have to do is create ordinary Go *structs* and call the `api.newRouter` to route them for you. Then, just call the standard Go server to provide the resources on the network.
 
-## Hello World
+### By example
 
 Save the code below in a file named `main.go`.
 
@@ -63,7 +64,9 @@ go run main.go
 
 Now you have a new REST service runnig, to *GET* your new `HelloWorld` Resource, open any browser and type `http://localhost:8080/helloworld`.
 
-## Service Design
+Another more complete example shows how to build and testing a (simple library service)[https://github.com/resoursea/example] with database access.
+
+## Basis
 
 REST services should be designed as a resource hierarchy.
 
@@ -158,9 +161,9 @@ func main() {
 }
 ~~~
 
-When you run de service above and try to *GET* one specific resource, accessing `http://localhost:8080/api/resources/123` in a browser, the server will return:
+When you run de service above and try to **GET** one specific resource, accessing `http://localhost:8080/api/resources/123` in a browser, the server will return:
 
-~~~
+~~~ javascript
 {
 	"Resource": {
 		"ID": 123,
