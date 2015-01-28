@@ -15,7 +15,7 @@ Install the Resoursea package:
 go get github.com/resoursea/api
 ~~~
 
-To create your service all you have to do is create ordinary Go *structs* and call the `api.newRouter` to route them for you. Then, just call the standard Go server to provide the resources on the network.
+To create your service all you have to do is create ordinary Go **structs** and call the `api.newRouter` to route them for you. Then, just call the standard Go server to provide the resources on the network.
 
 ## Hello World
 
@@ -67,22 +67,30 @@ Now you have a new REST service runnig, to **GET** your new `HelloWorld` Resourc
 
 REST services should be designed as a resource hierarchy.
 
-- Create a hierarchy of ordinary Go **structs** and that will defines the structure of your API access URI and the Resources it points to.
+- Create a hierarchy of ordinary Go **structs** and it will be mapped and routed, each **struct** will turn into a Resource available in your serivce.
 
-- Define HTTP methods for each Resource and these methods will be cached and routed efficiently.
+- Define HTTP methods for Resource you want to be accessible to the cliente, and these methods will be cached and routed efficiently.
 
-- Define the dependencies of each method and these dependencies will be cached and injected.
+- Define the dependencies of each method and these dependencies will be constructed and injected whenever necessary.
 
-- If you define the initial state of some Resource, it will be injected in the `Init` method to construct this dependency ever time it was requested.
+- Resources could define a constructor `Init` method, it will be used to construct the Resource every time it needs to be injected.
 
-- The field identifier that receives a mapped Resource that will be the used as its URI address. The root of the Resource tree isn't attached to any field, so you can pass 2 optional parameters when creating the router: the field identifier and the field tag.
+- If you define the initial state of some Resource, it will be injected in the constructor method every time it was requested.
 
-This way the ordinary Go **structs** are mapped as resources that together form the service to be offered by the server.
+- The URI address of the resource will be the identifier of the field that receives this Resource.
+
+- The root of the Resource tree isn't attached to any field, so you can pass 2 optional parameters when creating the router: the field identifier and the field tag.
+
+This way the ordinary Go **structs** are mapped as resources that together forms the service to be offered by the server.
 
 * Initial state of Resources are optional, if not defined a new empty instance will be injected.
+
 * The constructor method `Init` is optional, if not declared the initial state, or a new empty instance will be injected.
+
 * Remember that the first argument of a Go **struct** method is the **struct** itself, it means that for mapped methods (like `GET`, `POST`...) the instance of the resource will be always injected as the first argument.
+
 * One of the constraints for a REST services is to don't keep states in the server component, it means that the Resources shouldn't keep states over the connection. For this rason every request will receive a new initial state of every dependency will be create, constructed and injected.
+
 * Constructors can have dependencies, but *you can't design a circular dependency*. The tool ensures that the dependency will be constructed before the injection itself occurs.
 
 
