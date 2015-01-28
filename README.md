@@ -228,10 +228,6 @@ A [printer package](https://github.com/resoursea/printer) was created just for d
 
 ## Larn More
 
-REST is a set of architectural principles for design web services with a focus on Resources, including how they are addressed and transferred through the HTTP protocol.
-
-With this tool you can focus only on Resources and how it behaves,  the tool takes care of routes your Resources and inject the required dependencies to process the each request.
-
 [The concept, Samples, Documentation, Interfaces and Resources to use...](http://resoursea.com)
 
 ## Join The Community
