@@ -70,7 +70,7 @@ Then run your new service:
 go run main.go
 ~~~
 
-Now you have a new REST service runnig, to *GET* your new `HelloWorld` Resource, open any browser and type `http://localhost:8080/helloworld`.
+Now you have a new REST service runnig, to **GET** your new `HelloWorld` Resource, open any browser and type `http://localhost:8080/helloworld`.
 
 Another more complete example shows how to build and testing a [simple library service](https://github.com/resoursea/example) with database access, dependency injection and the use of `ID`.
 
@@ -78,7 +78,7 @@ Another more complete example shows how to build and testing a [simple library s
 
 - Create a hierarchy of ordinary Go *structs* and it will be mapped and routed, each *struct* will turn into a new Resource.
 
-- Define HTTP methods for Resources you want to be accessible to the client and these methods will be cached and routed.
+- Define HTTP methods for Resources these methods will be cached and routed.
 
 - Define the dependencies of each method and these dependencies will be constructed and injected whenever necessary.
 
@@ -86,7 +86,7 @@ Another more complete example shows how to build and testing a [simple library s
 
 - If you define the initial state of some Resource, it will be injected in the constructor method every time it was requested.
 
-- The URI address of the resource will be the identifier of the field that receives this Resource.
+- The URI address of the Resource will be the identifier of the field that receives this Resource.
 
 - The root of the Resource tree isn't attached to any field, so you can pass 2 optional parameters when creating the router: the field identifier and the field tag.
 
@@ -100,9 +100,9 @@ Another more complete example shows how to build and testing a [simple library s
 
 * One of the constraints for a REST services is to don't keep states in the server component, it means that the Resources shouldn't keep states over the connection. For this rason, every request will receive a new constructed Resource of each dependency.
 
-* Constructors can have dependencies, but **you can't design a circular dependency**. The tool ensures that the dependency will be constructed before the injection occurs.
+* Constructors can have dependencies, but **you can't design a circular dependency**.
 
-* Obs: If you change the state of some dependency somewhere that isn't it's method constructor, when it receives pointer Dependency value for instance, it could cause inconsistency.
+* Obs: If you change the state of some dependency somewhere that isn't it's method constructor, when it receives pointer Dependency value for instance, it can cause unexpected behavior.
 
 ## The Resource Tree
 
@@ -110,7 +110,7 @@ Resources is declared using ordinary Go *structs* and *slices* of *struts*.
 
 When declaring the service you create a tree of *structs* that will be mapped in routes.
 
-If you declare a list of Resources `type Gophers []Gopher` this behaves will be:
+If you declare a list of Resources `type Gophers []Gopher` its behavior will be::
 
 - Requests for the route `/gophers` will be answered by the `Gophers` type.
 
@@ -121,7 +121,7 @@ If you declare a list of Resources `type Gophers []Gopher` this behaves will be:
 
 ### ID
 
-The ID will be injected in every Resource if it's parent is a slice of the Resource itself. For instance:
+The `api.ID` dependency will be injected in Resource's methods that it's parent is a slice of the Resource itself. For instance:
 
 ~~~ go
 package main
@@ -175,7 +175,7 @@ func main() {
 }
 ~~~
 
-When you run de service above and try to **GET** one specific resource, accessing `http://localhost:8080/api/resources/123` in a browser, the server will return:
+When you run de service above and try to **GET** one specific Resource, accessing `http://localhost:8080/api/resources/123` in a browser, the server will return:
 
 ~~~ javascript
 {
@@ -200,35 +200,35 @@ In the REST arquitecture HTTP methods should be used explicitly in a way that's 
 - DELETE = Delete the specified Resource.
 - HEAD = Get metadata about the specified Resource.
 
-This API will scan and Route all methods declared that has some of those prefix. Methods also can be used to create the Actions some Resource can perform, you can declare it this way: `POSTLike()`. It will be mapped to the route `[POST] /resource/like`. If you declare just `POST()`, it will be mapped to the route `[POST] /resource`.
+This thing scans and route all Resource's methods that has some of those prefix. Methods also can be used to create the Actions some Resource can perform, you can declare it this way: `POSTLike()`. It will be mapped to the route `[POST] /resource/like`. If you declare just `POST()`, it will be mapped to the route `[POST] /resource`.
 
 
 ## The Dependency Injection
 
-When this framework is creating the Routes for mapped methods, it creates a tree with the dependencies of each method and garants that there is no Circular dependency. This tree is used to answare the request using a depth-first pos-order scanning, witch garants every depenency will be present in the context before it is requisited.
+When this framework is creating the Routes for mapped methods, it creates a tree with the dependencies of each method and ensures that there is no circular dependency. This tree is used to answer the request using a depth-first pos-order scanning to construct the dependencies, which ensures that every dependency will be present in the context before it is was requested.
 
-When injecting the required dependency, first the framework search for the initial value of the Resource in the Resource tree, if it wasn't declared, it creates a new empty value for the struct. If this dependency has a creator method (Init), it is called using this value, and its returned values is injected on the subsequent dependencies until arrive to the root of the dependency tree, the mapped method itself.
+When injecting the required dependency, first the framework search for the initial value of the Resource in the Resource tree, if it wasn't declared, it creates a new empty value for the `struct`. If this dependency has a creator method (Init), it is called using this value, and its returned values is injected on the subsequent dependencies until arrive to the root of the dependency tree, the mapped HTTP method itself.
 
-If the method is requiring for an Interface, the framework need find in the Resource tree witch one implements it, the framework will search in the siblings, parents or uncles. This search is done when requiring Structs, but it is not necessary to be in the resource tree. All this process is done in the route creation time, it guarantee that everything is cached before start to receive the client requests.
+If the method is requesting for an Interface, the framework need find in the Resource tree which one implements it, the framework will search in the siblings, parents or uncles. The same search is done when requiring Structs too, but it is not necessary to be in the Resource tree, if it is not present just a new empty value is used. All this process is done in the route creation time, it guarantee that everything is cached before start to receive the client requests.
 
 
 ## The Resoursea Ecosystem
 
-You also has a high software reuse through the sharing of resources already created by the community. It’s the resource sea!
+You also has a high software reuse through the sharing of Resources already created by the community. It’s the resource sea!
 
-Think about a resource used by virtually all web services, like an instance of the database. Most web services require this resource to process the request. This resource and its behavior not need to be implemented by all the developers. It is much better if everyone uses and contribute with just one package that contains this resource. Thus we’ll have stable and secure packages with resources to suit most of the needs. Allowing the exclusive focus on particular business rule, of your service.
+Think about a Resource used by virtually all web services, like an instance of the database. Most web services require this Resource to process the request. This Resource and its behavior not need to be implemented by all the developers. It is much better if everyone uses and contribute with just one package that contains this Resource. Thus we’ll have stable and secure packages with Resources to suit most of the needs. Allowing the exclusive focus on particular business rule, of your service.
 
 In Go the explicit declaration of implementation of an Interface is not required, which provide a decoupling of the Interface with the struct which satisfies this interface. This added to the fact tat Go provides a decentralized package manager provides the ideal environment for the sustainable growth of an ecosystem with interfaces and features that can be reused.
 
-Think of a scenario with a list of interfaces, each with a list of resources that implements it. His work as a developer of services is choosing the interfaces and resources to attend the requirements of the service and implements only the specific features of your nincho.
+Think of a scenario with a list of interfaces, each with a list of Resources that implements it. His work as a developer of services is choosing the interfaces and Resources to attend the requirements of the service and implements only the specific features of your nincho.
 
 ## Larn More
 
 REST is a set of architectural principles for design web services with a focus on Resources, including how they are addressed and transferred through the HTTP protocol.
 
-With this tool you can focus only on resources and how it behaves,  the tool takes care of routes your resources and inject the required dependencies to process the each request.
+With this tool you can focus only on Resources and how it behaves,  the tool takes care of routes your Resources and inject the required dependencies to process the each request.
 
-[The concept, Samples, Documentation, interfaces and resources to use...](http://resoursea.com)
+[The concept, Samples, Documentation, Interfaces and Resources to use...](http://resoursea.com)
 
 ## Join The Community
 
