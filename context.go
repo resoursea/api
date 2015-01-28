@@ -87,7 +87,9 @@ func (c *context) valueOf(t reflect.Type, requester reflect.Type) reflect.Value 
 	v := c.resourceValue(t)
 
 	// If it is requiring the Elem itself and it returned a Ptr to Elem
-	if t.Kind() == reflect.Struct && v.Kind() == reflect.Ptr {
+	// Or if it is requiring the Slice itself and it returned a Ptr to Slice
+	if t.Kind() == reflect.Struct && v.Kind() == reflect.Ptr ||
+		t.Kind() == reflect.Slice && v.Kind() == reflect.Ptr {
 		// It is requiring the Elem of a nil Ptr?
 		// Ok, give it an empty Elem of that Type
 		if v.IsNil() {

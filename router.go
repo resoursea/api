@@ -159,49 +159,42 @@ func (ro *route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// If there is just one resource to send back
-	if method.method.Type.NumOut() == 1 {
-
-		// Encode the output in JSON
-		jsonResponse, err := json.MarshalIndent(output[0].Interface(), "", "\t")
-		if err != nil {
-			writeError(w, errors.New("Error encoding to Json: "+err.Error()), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonResponse)
-		return
-	}
-
-	// If there is more than one output
-
 	// Trans form the method output into an slice of the values
 	// * Needed to generate a JSON response
 	response := make(map[string]interface{}, method.method.Type.NumOut())
 	for i, v := range output {
-		if !v.IsNil() {
-			// Error is printing empty structs, treat that...
-			if v.Type() == errorType {
-				response["error"] = v.Interface().(error).Error()
-				continue
-			}
-			if v.Type() == errorSliceType {
-
-				errs := make([]string, v.Len())
-				for i := 0; i < v.Len(); i++ {
-					errs[i] = v.Index(i).Interface().(error).Error()
-				}
-				response["errors"] = errs
-				continue
-			}
-
-			response[method.outName[i]] = v.Interface()
+		if !v.CanInterface() || v.Kind() == reflect.Ptr && v.IsNil() {
+			continue
 		}
+		// Error is printing empty structs, treat that...
+		if v.Type() == errorType {
+			value, err := v.Interface().(error)
+			if err || value == nil {
+				continue
+			}
+			response["error"] = value.Error()
+			continue
+		}
+		if v.Type() == errorSliceType {
+
+			errs := make([]string, v.Len())
+			for i := 0; i < v.Len(); i++ {
+				value, err := v.Index(i).Interface().(error)
+				if err || value == nil {
+					continue
+				}
+				errs[i] = value.Error()
+			}
+			response["errors"] = errs
+			continue
+		}
+
+		response[method.outName[i]] = v.Interface()
 	}
 
 	// Encode the output in JSON
-	jsonResponse, err := json.MarshalIndent(response, "", "\t")
+	var jsonResponse []byte
+	jsonResponse, err = json.MarshalIndent(response, "", "\t")
 	if err != nil {
 		writeError(w, errors.New("Error encoding to Json: "+err.Error()), http.StatusInternalServerError)
 		return

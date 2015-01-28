@@ -1,162 +1,134 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
-type API struct {
-	A A
+// The initial states of my Resources
+var api = API{
+	Gophers: Gophers{
+		Gopher{
+			Id:      1,
+			Message: "I love you",
+		},
+		Gopher{
+			Id:      2,
+			Message: "I still love programming",
+		},
+		Gopher{
+			Id:      3,
+			Message: "You so cute",
+		},
+	},
 }
 
-//
-// Test
-//
-func TestResource(t *testing.T) {
-	api := API{
-		A: A{
-			Name: "Testing",
-			//X:    X{Test: "Tested"},
-			//Bs: &BList{B{Name: "Started"}},
-			//B: &B{Name: "Setted"},
-		},
+func TestGetResource(t *testing.T) {
+	rt, err := NewRouter(api)
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/api/gophers/1", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	rt.ServeHTTP(w, req)
+
+	// Try to get the gopher from the response
+	var resp GopherData
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !reflect.DeepEqual(resp.Gopher, api.Gophers[0]) {
+		t.Error("The service returned the gopher wrong!")
+	}
+
+}
+
+func TestGetAction(t *testing.T) {
 
 	rt, err := NewRouter(api)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	//printer.Router(rt)
-
-	res := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/a", nil)
-
-	rt.ServeHTTP(res, req)
-
-	fmt.Printf("RETURN: %v\n", res.Body)
-
-	fmt.Println("\n-------- TEST END --------\n")
-
-}
-
-//
-// Resources used in test
-//
-
-type A struct {
-	Id   string
-	Name string
-	//Bs   *BList "Tag de Bs"
-	//X
-	//C C // conflit, name 'c' already used
-}
-
-func (a A) Init(ss A) *A {
-	return &a
-}
-
-func (a *A) GET(w http.ResponseWriter, req *http.Request, err error) *A {
-	log.Println("GET A received", err)
-	return a
-}
-
-func (a *A) PUTBsx() *A {
-	log.Println("Conflict Handler")
-	return a
-}
-
-type BList []B
-
-func (bs *BList) Init() *BList {
-	//log.Println("*** BList Received", d)
-	bs2 := append(*bs, B{Name: "FUCKED"})
-	return &bs2
-}
-
-func (b *BList) GET() *BList {
-	return b
-}
-
-func (b BList) GETLogin() BList {
-	b[0].Name += " ACTION"
-	return b
-}
-
-type B struct {
-	Id   int
-	Name string
-	//d    D
-	Cs CList "Tag de C"
-}
-
-func (b *B) Init(id ID) (B, error) {
-	if id != nil {
-		log.Println("*** B ID Received", id.String())
-	} else {
-		log.Println("*** B ID NOT RECEIVED")
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/api/gophers/2/message", nil)
+	if err != nil {
+		t.Error(err)
 	}
-	//b.Name = id.String()
-	b.Id = 312312
-	b.Name = "Altered!"
-	return *b, nil //fmt.Errorf("ERROR! LOL!")
-}
-func (b *B) GET(id ID) *B {
-	//b.Name = "B get" + id.String()
-	b.Id, _ = id.Int()
-	return b
+
+	rt.ServeHTTP(w, req)
+
+	// Try to get the string returned
+	var resp StringData
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.String != "I still love programming" {
+		t.Error("The service returned something wrong!")
+	}
+
 }
 
-func (b *B) PUT() {}
+type API struct {
+	Gophers Gophers
+}
 
-type C struct {
+type Gophers []Gopher
+
+type Gopher struct {
 	Id      int
-	BId     int
-	Nothing string
+	Message string
 }
 
-func (c *C) Init(id ID, b B, a A) {
-	log.Println("*** C Received ID:", id)
-	c.Id, _ = id.Int()
-	c.BId = b.Id
+// A constructor for Gopher dependency
+// Receives a Gophers dependency, and an ID passed on the URI
+// Gophers has no constructor, then is injected the raw initial state for Gophers
+func (_ *Gopher) Init(gs Gophers, id ID) (*Gopher, error) {
+	// Getting the ID in the URI
+	i, err := id.Int()
+	if err != nil {
+		return nil, err
+	}
+
+	gopher := &Gopher{}
+	for _, g := range gs {
+		if g.Id == i {
+			*gopher = g
+		}
+	}
+	if gopher == nil {
+		return nil, fmt.Errorf("Id %d not found in Gophers list", i)
+	}
+	return gopher, nil
 }
 
-func (c *C) GET() *C {
-	return c
+func (g *Gopher) GET(err error) (*Gopher, error) {
+	return g, err
+}
+func (g *Gopher) GETMessage(err error) (string, error) {
+	if err != nil {
+		return "", nil
+	}
+	return g.Message, err
 }
 
-type CList []*C
-
-func (c *CList) Init() {
-	//log.Println("*** C Received", d)
+type GopherData struct {
+	Gopher Gopher
 }
 
-//func (c *C) PUT(d *D) {}
-
-type X struct {
-	Test string
-	Gogo int
-	C    C
+type StringData struct {
+	String string
 }
-
-//func (b *X) PUT() {}
-
-type DoSomething interface {
-	doSomething()
-}
-
-type D struct {
-	Test string
-}
-
-func (d *D) Init() {
-	d.Test = "TESTED"
-}
-
-func (d *D) doSomething() {}
-
-// Set the value passed by user on creation
-//ptrValue.Elem().Set(value)
