@@ -40,17 +40,17 @@ import (
 	"github.com/resoursea/api"
 )
 
-type HelloWorld struct {
+type Gopher struct {
 	Message string
 }
 
-func (r *HelloWorld) GET() *HelloWorld {
+func (r *Gopher) GET() *Gopher {
 	return r
 }
 
 func main() {
-	router, err := api.NewRouter(HelloWorld{
-		Message: "Hello world!",
+	router, err := api.NewRouter(Gopher{
+		Message: "Hello Gophers!",
 	})
 	if err != nil {
 		log.Fatalln(err)
@@ -70,7 +70,7 @@ Then run your new service:
 go run main.go
 ~~~
 
-Now you have a new REST service runnig, to **GET** your new `HelloWorld` Resource, open any browser and type `http://localhost:8080/helloworld`.
+Now you have a new REST service runnig, to **GET** your new `Gopher` Resource, open any browser and type `http://localhost:8080/gopher`.
 
 Another more complete example shows how to build and testing a [simple library service](https://github.com/resoursea/example) with database access, dependency injection and the use of `ID`.
 
@@ -133,12 +133,12 @@ import (
 	"github.com/resoursea/api"
 )
 
-type Resource struct {
+type Gopher struct {
 	ID      int
 	Message string
 }
 
-func (r *Resource) Init(id api.ID) (*Resource, error) {
+func (r *Gopher) Init(id api.ID) (*Gopher, error) {
 	idInt, err := id.Int()
 	if err != nil {
 		return nil, err
@@ -147,20 +147,20 @@ func (r *Resource) Init(id api.ID) (*Resource, error) {
 	return r, nil
 }
 
-func (r *Resource) GET(err error) (*Resource, error) {
+func (r *Gopher) GET(err error) (*Gopher, error) {
 	return r, err
 }
 
-type Resources []Resource
+type Gophers []Gopher
 
 type API struct {
-	Resources Resources
+	Gophers Gophers
 }
 
 func main() {
 	router, err := api.NewRouter(API{
-		Resources: Resources{
-			Resource{Message: "Hello world!"},
+		Gophers: Gophers{
+			Gopher{Message: "Hello Gophers!"},
 		},
 	})
 	if err != nil {
@@ -175,13 +175,13 @@ func main() {
 }
 ~~~
 
-When you run de service above and try to **GET** one specific Resource, accessing `http://localhost:8080/api/resources/123` in a browser, the server will return:
+When you run de service above and try to **GET** one specific Resource, accessing `http://localhost:8080/api/gophers/123` in a browser, the server will return:
 
 ~~~ javascript
 {
-	"Resource": {
+	"Gopher": {
 		"ID": 123,
-		"Message": "Hello world!"
+		"Message": "Hello Gophers!"
 	}
 }
 ~~~
