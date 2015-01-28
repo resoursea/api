@@ -1,10 +1,20 @@
 # Resoursea
 
+## What is Resoursea
+
 A high productivity web framework for quickly writing resource based services fully implementing the REST architectural style.
 
 This framework allows you to really focus on the Resources and how it behaves, and let the tool for routing the requests and inject the required dependencies.
 
 This framework is written in [Golang](http://golang.org/) and uses the power of its implicit Interface and decentralized package manager.
+
+## Features
+
+- Describes the service API as a Go *struct* structure.
+- The *struct* structure defines the address of the Resources.
+- Requests are efficiently routed.
+- Method dependencies are constructed and injected when requested.
+- Resources becomes accessible simply defining the HTTP methods it is listening to.
 
 ## Getting Started
 
@@ -18,7 +28,7 @@ go get github.com/resoursea/api
 
 To create your service all you have to do is create ordinary Go *structs* and call the `api.newRouter` to route them for you. Then, just call the standard Go server to provide the resources on the network.
 
-### By example
+## By example
 
 Save the code below in a file named `main.go`.
 
@@ -64,7 +74,7 @@ go run main.go
 
 Now you have a new REST service runnig, to *GET* your new `HelloWorld` Resource, open any browser and type `http://localhost:8080/helloworld`.
 
-Another more complete example shows how to build and testing a [simple library service](https://github.com/resoursea/example) with database access.
+Another more complete example shows how to build and testing a [simple library service](https://github.com/resoursea/example) with database access, dependency injection and the use of `ID`.
 
 ## Basis
 
