@@ -11,8 +11,6 @@ This framework is written in [Golang](http://golang.org/) and uses the power of 
 ## Features
 
 - Describes the service API as a Go *struct* structure.
-- The *struct* structure defines the address of the Resources.
-- Requests are efficiently routed.
 - Method dependencies are constructed and injected when requested.
 - Resources becomes accessible simply defining the HTTP methods it is listening to.
 
@@ -78,11 +76,9 @@ Another more complete example shows how to build and testing a [simple library s
 
 ## Basis
 
-REST services should be designed as a resource hierarchy.
+- Create a hierarchy of ordinary Go *structs* and it will be mapped and routed, each *struct* will turn into a new Resource.
 
-- Create a hierarchy of ordinary Go *structs* and it will be mapped and routed, each *struct* will turn into a Resource available in your serivce.
-
-- Define HTTP methods for Resource you want to be accessible to the cliente, and these methods will be cached and routed efficiently.
+- Define HTTP methods for Resources you want to be accessible to the client and these methods will be cached and routed.
 
 - Define the dependencies of each method and these dependencies will be constructed and injected whenever necessary.
 
@@ -94,26 +90,34 @@ REST services should be designed as a resource hierarchy.
 
 - The root of the Resource tree isn't attached to any field, so you can pass 2 optional parameters when creating the router: the field identifier and the field tag.
 
-This way the ordinary Go *structs* are mapped as resources that together forms the service to be offered by the server.
+### More Info
 
 * Initial state of Resources are optional, if not defined a new empty instance will be injected.
 
 * The constructor method `Init` is optional, if not declared the initial state, or a new empty instance will be injected.
 
-* Remember that the first argument of a Go *struct* method is the *struct* itself, it means that for mapped methods (like `GET`, `POST`...) the instance of the resource will be always injected as the first argument.
+* The first argument of a Go *struct* method is the *struct* itself, it means that for mapped methods the instance of the Resource will be always injected as the first argument.
 
-* One of the constraints for a REST services is to don't keep states in the server component, it means that the Resources shouldn't keep states over the connection. For this rason every request will receive a new initial state of every dependency will be create, constructed and injected.
+* One of the constraints for a REST services is to don't keep states in the server component, it means that the Resources shouldn't keep states over the connection. For this rason, every request will receive a new constructed Resource of each dependency.
 
-* Constructors can have dependencies, but *you can't design a circular dependency*. The tool ensures that the dependency will be constructed before the injection itself occurs.
+* Constructors can have dependencies, but **you can't design a circular dependency**. The tool ensures that the dependency will be constructed before the injection occurs.
 
-
-* Obs: Just the constructor should change the state Resource itself and other constructors should not change that state. If you change the state of some dependency that is not the method owner, when it receives pointer Dependency value, it could cause inconsistency.
+* Obs: If you change the state of some dependency somewhere that isn't it's method constructor, when it receives pointer Dependency value for instance, it could cause inconsistency.
 
 ## The Resource Tree
 
 Resources is declared using ordinary Go *structs* and *slices* of *struts*.
 
-When declaring the service you create a tree of *structs* that will be mapped in routes. The Resource name will be the name of the field that receives the Resource and it is used as its URI address. If you declare a list of Resources `type Resources []Resource` and put it in the Resource tree, the service will behave like the imagined: Requests for the route `/resources` will be answer by the `Resources` type, and requests for the route `/resources/:ID` will be answer by the `Resource` struct, and the ID will be cautch and injected as the dependency `*api.ID` whenever `Resource` requests for it.
+When declaring the service you create a tree of *structs* that will be mapped in routes.
+
+If you declare a list of Resources `type Gophers []Gopher` this behaves will be:
+
+- Requests for the route `/gophers` will be answered by the `Gophers` type.
+
+- Requests for the route `/gophers/:ID` will be answered by the `Gopher` type.
+
+- Methods in `Gopher` could request for `*api.ID`. This dependency keeps the requested ID for this Resource present in the URI.
+
 
 ### ID
 
