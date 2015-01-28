@@ -1,6 +1,6 @@
-# Resoursea
+![Image of Yaktocat](http://resoursea.com/img/resoursea-logo-header.png)
 
-## What is Resoursea
+## What is Resoursea?
 
 A high productivity web framework for quickly writing resource based services fully implementing the REST architectural style.
 
