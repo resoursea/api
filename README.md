@@ -175,7 +175,7 @@ func main() {
 }
 ~~~
 
-When you run de service above and try to **GET** one specific Resource, accessing `http://localhost:8080/api/gophers/123` in a browser, the server will return:
+When you run de service above and try to **GET** one specific `Gopher`, accessing `http://localhost:8080/api/gophers/123` in a browser, the server will return:
 
 ~~~ javascript
 {
@@ -186,7 +186,7 @@ When you run de service above and try to **GET** one specific Resource, accessin
 }
 ~~~
 
-Here we can see that the declared initial state was injected in the Resource constructor, and the `ID` sent by the URI was also injected in the constructor.
+Here we can see that the declared initial state was injected in the `Gopher` constructor, and the `api.ID` sent by the URI was also injected in the constructor.
 
 
 ## The Mapped Methods
