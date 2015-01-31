@@ -39,4 +39,4 @@ func main() {
 	}
 }
 */
-package main
+package api

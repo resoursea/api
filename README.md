@@ -82,9 +82,11 @@ Another more complete example shows how to build and testing a [simple library s
 
 - Define the dependencies of each method and these dependencies will be constructed and injected whenever necessary.
 
-- Resources could define a constructor `New` method, it will be used to construct the Resource every time it needs to be injected.
+- You can define the initial state of some Resource and it will be injected in the initializer and constructor methods.
 
-- If you define the initial state of some Resource, it will be injected in the constructor method every time it was requested.
+- Resources can define an initializer `Init` method and it will be used to change the initial state of this Resource. It runs just one time when resources are being mapped.
+
+- Resources can define a constructor `New` method, it will be used to construct the Resource every time it needs to be injected. It runs every time one method depends on this resource.
 
 - The URI address of the Resource will be the identifier of the field that receives this Resource.
 
@@ -92,15 +94,19 @@ Another more complete example shows how to build and testing a [simple library s
 
 ### More Info
 
-* Initial state of Resources are optional, if not defined a new empty instance will be injected.
+* Initial state of Resources are optional, if not defined a new empty instance will be used.
 
-* The constructor method `New` is optional, if not declared the initial state, or a new empty instance will be injected.
+* The initialzer method `Init` is optional, if not declared the initial state will remains the same.
+
+* The constructor method `New` is optional, if not declared the initial state will be injected.
 
 * The first argument of a Go *struct* method is the *struct* itself, it means that for mapped methods the instance of the Resource will be always injected as the first argument.
 
 * One of the constraints for a REST services is to don't keep states in the server component, it means that the Resources shouldn't keep states over the connection. For this rason, every request will receive a new constructed Resource of each dependency.
 
-* Constructors can have dependencies, but **you can't design a circular dependency**.
+* Initializers cant have dependencies, and you can return just the resource itself and/or an error.
+
+* Constructors can have dependencies, but **you can't design a circular dependency**, and you can return just the resource itself and/or an error.
 
 * Obs: If you change the state of some dependency somewhere that isn't it's method constructor, when it receives pointer Dependency value for instance, it can cause unexpected behavior.
 
@@ -117,6 +123,14 @@ If you declare a list of Resources `type Gophers []Gopher` its behavior will be:
 - Requests for the route `/gophers/:ID` will be answered by the `Gopher` type.
 
 - Methods in `Gopher` could request for `*api.ID`. This dependency keeps the requested ID for this Resource present in the URI.
+
+## The Initializer `Init` Method
+
+This method is used to insert/modify the initial value of some method. If you defined the initial state of this resource on the API creation, this state will always be injected as the first argument of this method. This method just can return the resource itself and/or an error. If this method returns an error, this value will be returned by the `api.NewRouter` method.
+
+## The Constructor `New` Method
+
+This method is used to construct the value of the Resource before it is injected. The initial value of this method will always be injected as the first argument of this method. This method just can return the resource itself and/or an error. If this method returns an error, this value can be caught by any subsequent method.
 
 
 ### ID
