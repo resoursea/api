@@ -133,9 +133,11 @@ This method is used to insert/modify the initial value of some method. If you de
 This method is used to construct the value of the Resource before it is injected. The initial value of this method will always be injected as the first argument of this method. This method just can return the resource itself and/or an error. If this method returns an error, this value can be caught by any subsequent method.
 
 
-### ID
+### The ID Dependency
 
-The `api.ID` dependency will be injected in Resource's methods that it's parent is a slice of the Resource itself. For instance:
+This dependency is used to identify one Resource in a list. The `api.ID` dependency will be injected in the Resource's methods that it's parent is a slice of the Resource itself.
+
+## A More Complete Example
 
 ~~~ go
 package main
@@ -148,8 +150,14 @@ import (
 )
 
 type Gopher struct {
-	ID      int
-	Message string
+	ID          int
+	Message     string
+	Initialized bool
+}
+
+func (r *Gopher) Init() *Gopher {
+	r.Initialized = true
+	return r
 }
 
 func (r *Gopher) New(id api.ID) (*Gopher, error) {
@@ -174,7 +182,10 @@ type API struct {
 func main() {
 	router, err := api.NewRouter(API{
 		Gophers: Gophers{
-			Gopher{Message: "Hello Gophers!"},
+			Gopher{
+				Message:     "Hello Gophers!",
+				Initialized: false,
+			},
 		},
 	})
 	if err != nil {
@@ -187,6 +198,7 @@ func main() {
 		log.Fatalln(err)
 	}
 }
+
 ~~~
 
 When you run de service above and try to **GET** one specific `Gopher`, accessing `http://localhost:8080/api/gophers/123` in a browser, the server will return:
@@ -195,12 +207,13 @@ When you run de service above and try to **GET** one specific `Gopher`, accessin
 {
 	"Gopher": {
 		"ID": 123,
-		"Message": "Hello Gophers!"
+		"Message": "Hello Gophers!",
+		"Initialized": true,
 	}
 }
 ~~~
 
-Here we can see that the declared initial state was injected in the `Gopher` constructor, and the `api.ID` sent by the URI was also injected in the constructor.
+Here we can see that the declared initial state was injected in the `Gopher` initializer, and this method updates the initial state. The initial state of `Gopher` and the `api.ID`, sent by the URI, was injected in the constructor method. The `GET` method of `Gopher` just listen for an **HTTP GET** action and return the injected values to the client.
 
 
 ## The Mapped Methods
