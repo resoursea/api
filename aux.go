@@ -173,6 +173,38 @@ func isSliceType(t reflect.Type) bool {
 	return t.Kind() == reflect.Slice
 }
 
+// 'Init' methods should have no Inputs,
+// and it can just output an error
+func isValidInit(m reflect.Method) error {
+
+	if m.Type.NumIn() > 1 {
+		return fmt.Errorf("Resource %s has an invalid Init method %s. "+
+			" It should have no inputs\n",
+			m.Type.In(0), m.Type)
+	}
+
+	if m.Type.NumOut() > 2 {
+		return fmt.Errorf("Resource %s has an invalid Init method %s. "+
+			" It can outputs just itself and one error\n",
+			m.Type.In(0), m.Type)
+	}
+
+	// Method Struct owner Type
+	owner := elemOfType(m.Type.In(0))
+	for i := 0; i < m.Type.NumOut(); i++ {
+		t := elemOfType(m.Type.Out(i))
+		// Ignore the Resource itself and the error types
+		if elemOfType(t) == owner || t == errorType {
+			continue
+		}
+
+		return fmt.Errorf("Resource %s has an invalid New method %s. "+
+			"It can't outputs %s\n", m.Type.In(0), m.Type, t)
+	}
+
+	return nil
+}
+
 // 'New' methods should have no Output,
 // it should alter the first argument as a pointer
 // Or, at least, return itself

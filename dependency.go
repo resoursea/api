@@ -55,8 +55,8 @@ func (ds dependencies) scanMethodInputs(m reflect.Method, r *resource) error {
 			return err
 		}
 
-		// We should add this dependency before scan its 'New' Dependencies
-		// cause the 'New' first argument will requires the Resource itself
+		// We should add this dependency before scan its constructor Dependencies
+		// cause the constructor's first argument will requires the Resource itself
 
 		ds.add(d)
 

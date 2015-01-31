@@ -16,6 +16,7 @@ type resource struct {
 	anonymous bool        // Is Anonymous field?
 	tag       reflect.StructTag
 	isSlice   bool
+	init      *reflect.Method
 }
 
 // Create a new Resource tree based on given Struct, its Struct Field and its Resource parent
@@ -40,6 +41,7 @@ func newResource(value reflect.Value, field reflect.StructField, parent *resourc
 		anonymous: field.Anonymous,
 		tag:       field.Tag,
 		isSlice:   isSliceType(value.Type()),
+		init:      nil, // Appended above
 	}
 
 	// Check for circular dependency !!!
@@ -47,6 +49,32 @@ func newResource(value reflect.Value, field reflect.StructField, parent *resourc
 	if exist {
 		return nil, fmt.Errorf("The resource %s as '%s' have an circular dependency in %s as '%s'",
 			r.value.Type(), r.name, p.value.Type(), p.name)
+	}
+
+	// Check if this resource has a Init method
+	// If it has, validate it and initialize the resource
+	init, exists := r.value.Type().MethodByName("Init")
+	if exists {
+		err := isValidInit(init)
+		if err != nil {
+			return nil, err
+		}
+		r.init = &init
+
+		// Running Init method
+
+		out := make([]reflect.Value, init.Type.NumOut())
+		// Call the init method passing the initial value of the resource
+		out = init.Func.Call([]reflect.Value{r.value})
+		for _, v := range out {
+			// Test is Init returned an error
+			if v.Type() == errorType && !v.IsNil() {
+				return nil, v.Interface().(error)
+			}
+			if ptrOfType(v.Type()) == r.value.Type() {
+				r.value = ptrOfValue(v)
+			}
+		}
 	}
 
 	// If it is slice, scan the Elem of this slice
