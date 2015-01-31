@@ -60,12 +60,12 @@ func (cd *circularDependency) checkDependency(d *dependency, m *method) error {
 		return err
 	}
 
-	// Check if this Dependency has Init Method
-	if d.init != nil {
-		for i := 0; i < d.init.Type.NumIn(); i++ {
+	// Check if this Dependency has New Method
+	if d.constructor != nil {
+		for i := 0; i < d.constructor.Type.NumIn(); i++ {
 
-			t := d.init.Type.In(i)
-			//log.Println("CD for Dependency Init Dependency", i, t, dependency.isType(t))
+			t := d.constructor.Type.In(i)
+			//log.Println("CD for Dependency New Dependency", i, t, dependency.isType(t))
 
 			// The first element will always be the dependency itself
 			if d.isType(t) {

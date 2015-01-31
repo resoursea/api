@@ -82,7 +82,7 @@ Another more complete example shows how to build and testing a [simple library s
 
 - Define the dependencies of each method and these dependencies will be constructed and injected whenever necessary.
 
-- Resources could define a constructor `Init` method, it will be used to construct the Resource every time it needs to be injected.
+- Resources could define a constructor `New` method, it will be used to construct the Resource every time it needs to be injected.
 
 - If you define the initial state of some Resource, it will be injected in the constructor method every time it was requested.
 
@@ -94,7 +94,7 @@ Another more complete example shows how to build and testing a [simple library s
 
 * Initial state of Resources are optional, if not defined a new empty instance will be injected.
 
-* The constructor method `Init` is optional, if not declared the initial state, or a new empty instance will be injected.
+* The constructor method `New` is optional, if not declared the initial state, or a new empty instance will be injected.
 
 * The first argument of a Go *struct* method is the *struct* itself, it means that for mapped methods the instance of the Resource will be always injected as the first argument.
 
@@ -138,7 +138,7 @@ type Gopher struct {
 	Message string
 }
 
-func (r *Gopher) Init(id api.ID) (*Gopher, error) {
+func (r *Gopher) New(id api.ID) (*Gopher, error) {
 	idInt, err := id.Int()
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ This thing scans and route all Resource's methods that has some of those prefix.
 
 When this framework is creating the Routes for mapped methods, it creates a tree with the dependencies of each method and ensures that there is no circular dependency. This tree is used to answer the request using a depth-first pos-order scanning to construct the dependencies, which ensures that every dependency will be present in the context before it is was requested.
 
-When injecting the required dependency, first the framework search for the initial value of the Resource in the Resource tree, if it wasn't declared, it creates a new empty value for the `struct`. If this dependency has a creator method (Init), it is called using this value, and its returned values is injected on the subsequent dependencies until arrive to the root of the dependency tree, the mapped HTTP method itself.
+When injecting the required dependency, first the framework search for the initial value of the Resource in the Resource tree, if it wasn't declared, it creates a new empty value for the `struct`. If this dependency has a creator method (New), it is called using this value, and its returned values is injected on the subsequent dependencies until arrive to the root of the dependency tree, the mapped HTTP method itself.
 
 If the method is requesting for an Interface, the framework need find in the Resource tree which one implements it, the framework will search in the siblings, parents or uncles. The same search is done when requiring Structs too, but it is not necessary to be in the Resource tree, if it is not present just a new empty value is used. All this process is done in the route creation time, it guarantee that everything is cached before start to receive the client requests.
 

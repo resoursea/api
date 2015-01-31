@@ -173,12 +173,12 @@ func isSliceType(t reflect.Type) bool {
 	return t.Kind() == reflect.Slice
 }
 
-// Init methods should have no Output,
+// 'New' methods should have no Output,
 // it should alter the first argument as a pointer
 // Or, at least, return itself
-func isValidInit(method reflect.Method) error {
+func isValidConstructor(method reflect.Method) error {
 
-	// Test if Init method return itself and/or error types
+	// Test if New method return itself and/or error types
 	// just one of each type is accepted
 	itself := false
 	err := false
@@ -198,7 +198,7 @@ func isValidInit(method reflect.Method) error {
 			continue
 		}
 
-		return fmt.Errorf("Resource %s has an invalid Init method %s. "+
+		return fmt.Errorf("Resource %s has an invalid New method %s. "+
 			"It can't outputs %s \n", method.Type.In(0), method.Type, t)
 	}
 

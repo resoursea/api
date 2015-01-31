@@ -96,7 +96,7 @@ type Gopher struct {
 // A constructor for Gopher dependency
 // Receives a Gophers dependency, and an ID passed on the URI
 // Gophers has no constructor, then is injected the raw initial state for Gophers
-func (_ *Gopher) Init(gs Gophers, id ID) (*Gopher, error) {
+func (_ *Gopher) New(gs Gophers, id ID) (*Gopher, error) {
 	// Getting the ID in the URI
 	i, err := id.Int()
 	if err != nil {

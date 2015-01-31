@@ -124,7 +124,7 @@ func (c *context) resourceValue(t reflect.Type) reflect.Value {
 
 	}
 	// It is not present yet, so we need to construct it
-	return c.initDependencie(t)
+	return c.newDependencie(t)
 }
 
 // Return the first error of the list, or an nil error
@@ -159,7 +159,7 @@ func (c *context) idValue(t reflect.Type) reflect.Value {
 
 // Construct all the dependencies level by level
 // Garants that every dependencie exists before be requisited
-func (c *context) initDependencie(t reflect.Type) reflect.Value {
+func (c *context) newDependencie(t reflect.Type) reflect.Value {
 
 	dependencie, exist := c.method.dependencies[t]
 	if !exist { // It should never occours
@@ -174,22 +174,22 @@ func (c *context) initDependencie(t reflect.Type) reflect.Value {
 	// Instanciate a new dependency and add it to the list
 	c.values = append(c.values, dependencie.new())
 
-	if dependencie.init != nil {
+	if dependencie.constructor != nil {
 
-		inputs := c.getInputs(dependencie.init) //dependencie.Input, dependencie.Value.Type())
+		inputs := c.getInputs(dependencie.constructor) //dependencie.Input, dependencie.Value.Type())
 
-		out := make([]reflect.Value, dependencie.init.Type.NumOut())
+		out := make([]reflect.Value, dependencie.constructor.Type.NumOut())
 
 		//log.Printf("Calling %s with %q \n", dependencie.Method.Method.Type, inputs)
 
-		out = dependencie.init.Func.Call(inputs)
+		out = dependencie.constructor.Func.Call(inputs)
 
-		// If the Init method return something,
+		// If the New method return something,
 		// it will be the resource itself with
 		// its values updated
-		if dependencie.init.Type.NumOut() > 0 {
+		if dependencie.constructor.Type.NumOut() > 0 {
 
-			for i := 0; i < dependencie.init.Type.NumOut(); i++ {
+			for i := 0; i < dependencie.constructor.Type.NumOut(); i++ {
 
 				out[i].Type()
 

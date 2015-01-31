@@ -9,8 +9,8 @@ type dependency struct {
 	// Type Ptr to Struct, or Ptr to Slice of Struct
 	value reflect.Value
 
-	// Init method and its input
-	init *reflect.Method
+	// Constructor method New()
+	constructor *reflect.Method
 }
 
 type dependencies map[reflect.Type]*dependency
@@ -55,36 +55,36 @@ func (ds dependencies) scanMethodInputs(m reflect.Method, r *resource) error {
 			return err
 		}
 
-		// We should add this dependency before scan its Init Dependencies
-		// cause the Init first argument will requires the Resource itself
+		// We should add this dependency before scan its 'New' Dependencies
+		// cause the 'New' first argument will requires the Resource itself
 
 		ds.add(d)
 
 		// Check if Dependency constructor exists
-		init, exists := d.value.Type().MethodByName("Init")
+		constructor, exists := d.value.Type().MethodByName("New")
 		if !exists {
-			//log.Printf("Type %s doesn't have Init method\n", d.Value.Type())
+			//log.Printf("Type %s doesn't have New method\n", d.Value.Type())
 			continue
 		}
 
-		//log.Println("Scanning Init for ", init.Type)
+		//log.Println("Scanning New for ", constructor.Type)
 
-		// Init method should have no return,
+		// 'New' method should have no return,
 		// or return just the resource itself and/or error
-		err = isValidInit(init)
+		err = isValidConstructor(constructor)
 		if err != nil {
 			return err
 		}
 
-		//log.Println("Scan Dependencies for Init method", d.Method.Method.Type)
+		//log.Println("Scan Dependencies for 'New' method", d.Method.Method.Type)
 
-		err = ds.scanMethodInputs(init, r)
+		err = ds.scanMethodInputs(constructor, r)
 		if err != nil {
 			return err
 		}
 
 		// And attach it into the Dependency Method
-		d.init = &init
+		d.constructor = &constructor
 	}
 	return nil
 }
@@ -111,8 +111,8 @@ func newDependency(t reflect.Type, r *resource) (*dependency, error) {
 	}
 
 	d := &dependency{
-		value: v,
-		init:  nil,
+		value:       v,
+		constructor: nil,
 	}
 
 	//log.Printf("Created dependency %s to use as %s\n", v, t)
