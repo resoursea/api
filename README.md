@@ -110,7 +110,7 @@ Another more complete example shows how to build and testing a [simple library s
 
 * Obs: If you change the state of some dependency somewhere that isn't it's method constructor, when it receives pointer Dependency value for instance, it can cause unexpected behavior.
 
-## The Resource Tree
+### The Resource Tree
 
 Resources is declared using ordinary Go *structs* and *slices* of *struts*.
 
@@ -124,18 +124,24 @@ If you declare a list of Resources `type Gophers []Gopher` its behavior will be:
 
 - Methods in `Gopher` could request for `*api.ID`. This dependency keeps the requested ID for this Resource present in the URI.
 
-## The Initializer `Init` Method
+### Initializer `Init` Method
 
 This method is used to insert/modify the initial value of some method. If you defined the initial state of this resource on the API creation, this state will always be injected as the first argument of this method. This method just can return the resource itself and/or an error. If this method returns an error, this value will be returned by the `api.NewRouter` method.
 
-## The Constructor `New` Method
+### Constructor `New` Method
 
 This method is used to construct the value of the Resource before it is injected. The initial value of this method will always be injected as the first argument of this method. This method just can return the resource itself and/or an error. If this method returns an error, this value can be caught by any subsequent method.
 
 
-### The ID Dependency
+### ID Dependency
 
 This dependency is used to identify one Resource in a list. The `api.ID` dependency will be injected in the Resource's methods that it's parent is a slice of the Resource itself.
+
+### Interface Dependency
+
+Interfaces can be used to decouple the service of the Resource's implementation. When an method is requiring an Interface, the framework will search in the Resource tree which Resource satisfies this Interface. It searches in the siblings and uncles until reaches the root of the tree. If no Resource were found to satisfy thi Interface, an error is returned on the mapping time.
+
+So, if some method requires one Interface, you should specify at least one implementation of this interface in the Resource tree. You can add all the interfaces implementation in the root of your service, so it will be easy to change the implementation if it's necessary.
 
 ## A More Complete Example
 
@@ -216,7 +222,7 @@ When you run de service above and try to **GET** one specific `Gopher`, accessin
 Here we can see that the declared initial state was injected in the `Gopher` initializer, and this method updates the initial state. The initial state of `Gopher` and the `api.ID`, sent by the URI, was injected in the constructor method. The `GET` method of `Gopher` just listen for an **HTTP GET** action and return the injected values to the client.
 
 
-## The Mapped Methods
+### Mapped Methods
 
 In the REST arquitecture HTTP methods should be used explicitly in a way that's consistent with the protocol definition. This basic REST design principle establishes a one-to-one mapping between create, read, update, and delete (CRUD) operations and HTTP methods. According to this mapping:
 
@@ -230,7 +236,7 @@ In the REST arquitecture HTTP methods should be used explicitly in a way that's 
 This thing scans and route all Resource's methods that has some of those prefix. Methods also can be used to create the Actions some Resource can perform, you can declare it this way: `POSTLike()`. It will be mapped to the route `[POST] /resource/like`. If you declare just `POST()`, it will be mapped to the route `[POST] /resource`.
 
 
-## The Dependency Injection
+## Dependency Injection
 
 When this framework is creating the Routes for mapped methods, it creates a tree with the dependencies of each method and ensures that there is no circular dependency. This tree is used to answer the request using a depth-first pos-order scanning to construct the dependencies, which ensures that every dependency will be present in the context before it is was requested.
 
@@ -239,7 +245,7 @@ When injecting the required dependency, first the framework search for the initi
 If the method is requesting for an Interface, the framework need find in the Resource tree which one implements it, the framework will search in the siblings, parents or uncles. The same search is done when requiring Structs too, but it is not necessary to be in the Resource tree, if it is not present just a new empty value is used. All this process is done in the route creation time, it guarantee that everything is cached before start to receive the client requests.
 
 
-## The Resoursea Ecosystem
+## Resoursea Ecosystem
 
 You also has a high software reuse through the sharing of Resources already created by the community. It’s the resource sea!
 
