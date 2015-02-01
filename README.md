@@ -236,7 +236,7 @@ In the REST arquitecture HTTP methods should be used explicitly in a way that's 
 This thing scans and route all Resource's methods that has some of those prefix. Methods also can be used to create the Actions some Resource can perform, you can declare it this way: `POSTLike()`. It will be mapped to the route `[POST] /resource/like`. If you declare just `POST()`, it will be mapped to the route `[POST] /resource`.
 
 
-## Dependency Injection
+### Dependency Injection
 
 When this framework is creating the Routes for mapped methods, it creates a tree with the dependencies of each method and ensures that there is no circular dependency. This tree is used to answer the request using a depth-first pos-order scanning to construct the dependencies, which ensures that every dependency will be present in the context before it is was requested.
 
@@ -245,7 +245,7 @@ When injecting the required dependency, first the framework search for the initi
 If the method is requesting for an Interface, the framework need find in the Resource tree which one implements it, the framework will search in the siblings, parents or uncles. The same search is done when requiring Structs too, but it is not necessary to be in the Resource tree, if it is not present just a new empty value is used. All this process is done in the route creation time, it guarantee that everything is cached before start to receive the client requests.
 
 
-## Resoursea Ecosystem
+### Resoursea Ecosystem
 
 You also has a high software reuse through the sharing of Resources already created by the community. It’s the resource sea!
 
