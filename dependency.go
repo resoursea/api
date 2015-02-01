@@ -23,6 +23,7 @@ func newDependencies(m reflect.Method, r *resource) (dependencies, error) {
 	if err != nil {
 		return nil, err
 	}
+	//log.Printf("Dependencies created: %v\n", ds)
 	return ds, nil
 }
 
@@ -34,11 +35,13 @@ func (ds dependencies) scanMethodInputs(m reflect.Method, r *resource) error {
 	for i := 0; i < m.Type.NumIn(); i++ {
 		input := m.Type.In(i)
 
+		//log.Println("Scanning for dependency", input, "on method", m.Type)
+
 		// Check if this type already exists in the dependencies
 		// If it was indexed by another type, this method
 		// ensures that it will be indexed for this type too
 		if ds.exists(input) {
-			//log.Printf("Found dependency %s to use as %s\n", dp.Value, t)
+			//log.Printf("Found dependency to use as %s\n", input)
 			continue
 		}
 
@@ -55,10 +58,12 @@ func (ds dependencies) scanMethodInputs(m reflect.Method, r *resource) error {
 			return err
 		}
 
+		//log.Printf("Dependency created [%s]%s", input, d.value)
+
 		// We should add this dependency before scan its constructor Dependencies
 		// cause the constructor's first argument will requires the Resource itself
 
-		ds.add(d)
+		ds.add(input, d)
 
 		// Check if Dependency constructor exists
 		constructor, exists := d.value.Type().MethodByName("New")
@@ -121,9 +126,11 @@ func newDependency(t reflect.Type, r *resource) (*dependency, error) {
 }
 
 // Add a new dependency to the Dependencies list
-func (ds dependencies) add(d *dependency) {
+// Receives an type, to use as index, and the dependency itself
+// This type could be both Interface or Struct type
+func (ds dependencies) add(t reflect.Type, d *dependency) {
 	//log.Println("Adding dependency", d.Value.Type())
-	ds[d.value.Type()] = d
+	ds[t] = d
 }
 
 // This method checks if exist an value for the received type

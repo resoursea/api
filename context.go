@@ -163,6 +163,7 @@ func (c *context) newDependencie(t reflect.Type) reflect.Value {
 
 	dependencie, exist := c.method.dependencies[t]
 	if !exist { // It should never occours
+		log.Printf("%v", c.method.dependencies)
 		log.Panicf("Dependencie %s not mapped!!!", t)
 	}
 

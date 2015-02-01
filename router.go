@@ -166,10 +166,9 @@ func (ro *route) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if !v.CanInterface() || v.Kind() == reflect.Ptr && v.IsNil() {
 			continue
 		}
-		// Error is printing empty structs, treat that...
 		if v.Type() == errorType {
-			value, err := v.Interface().(error)
-			if err || value == nil {
+			value, ok := v.Interface().(error)
+			if !ok || value == nil {
 				continue
 			}
 			response["error"] = value.Error()
